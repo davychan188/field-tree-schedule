@@ -493,7 +493,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "7";
+const APP_VER = "8";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -801,13 +801,25 @@ const NUM_LABELS = {
 };
 const NUM_ORDER = ["batch", "treeNo", "species", "h", "s", "dbh"];
 
+function parseTreeNo(val) {
+  let rest = String(val || "");
+  let star = false;
+  if (rest.startsWith("⭐")) {
+    star = true;
+    rest = rest.slice(1);
+  }
+  let prefix = "";
+  if (rest.startsWith("AT")) { prefix = "AT"; rest = rest.slice(2); }
+  else if (rest.startsWith("TG")) { prefix = "TG"; rest = rest.slice(2); }
+  else if (rest.startsWith("T")) { prefix = "T"; rest = rest.slice(1); }
+  return { star, prefix, rest };
+}
+function formatTreeNo(p) {
+  return (p.star ? "⭐" : "") + (p.prefix || "") + (p.rest || "");
+}
 function treePrefix(val) {
-  const s = String(val || "");
-  if (s.startsWith("⭐")) return "⭐";
-  if (s.startsWith("AT")) return "AT";
-  if (s.startsWith("TG")) return "TG";
-  if (s.startsWith("T")) return "T";
-  return "";
+  const p = parseTreeNo(val);
+  return (p.star ? "⭐" : "") + (p.prefix || "");
 }
 
 function showKeypad(input) {
@@ -826,18 +838,20 @@ function hideKeypad() {
 }
 function syncPrefixButtons() {
   const val = state.numTarget ? state.numTarget.value : "";
-  const cur = treePrefix(val);
+  const cur = parseTreeNo(val);
   document.querySelectorAll("#numpadPrefixes button").forEach(b => {
-    b.classList.toggle("on", b.dataset.prefix === cur);
+    const key = b.dataset.prefix;
+    const on = key === "⭐" ? cur.star : key === cur.prefix;
+    b.classList.toggle("on", on);
   });
 }
 function setTreePrefix(prefix) {
   const input = state.numTarget;
   if (!input) return;
-  const s = String(input.value || "");
-  const cur = treePrefix(s);
-  const digits = cur ? s.slice(cur.length) : s;
-  input.value = prefix + digits;
+  const cur = parseTreeNo(input.value);
+  if (prefix === "⭐") cur.star = !cur.star;
+  else cur.prefix = prefix;
+  input.value = formatTreeNo(cur);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   syncPrefixButtons();
 }
