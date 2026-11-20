@@ -158,9 +158,8 @@
   table.sheet {
     border-collapse: collapse;
     width: 100%;
-    min-width: 760px;
     table-layout: fixed;
-    font-size: 15px;
+    font-size: 14px;
   }
   table.sheet th, table.sheet td {
     border: 1px solid #b7c2bb;
@@ -180,13 +179,13 @@
     white-space: nowrap;
   }
   table.sheet th .u { display: block; font-weight: 400; font-size: 10px; opacity: .85; }
-  table.sheet col.c-num { width: 28px; }
-  table.sheet col.c-batch { width: 48px; }
-  table.sheet col.c-tree { width: 86px; }
-  table.sheet col.c-sp { width: auto; }
-  table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 48px; }
-  table.sheet col.c-def { width: 108px; }
-  table.sheet col.c-rec { width: 120px; }
+  table.sheet col.c-num { width: 26px; }
+  table.sheet col.c-batch { width: 42px; }
+  table.sheet col.c-tree { width: 76px; }
+  table.sheet col.c-sp { width: 118px; }
+  table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 40px; }
+  table.sheet col.c-def { width: 96px; }
+  table.sheet col.c-rec { width: 108px; }
   table.sheet col.c-act { width: 44px; }
   table.sheet td.num {
     text-align: center;
@@ -200,12 +199,13 @@
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 8px 3px;
-    font-size: 15px;
+    padding: 5px 3px;
+    font-size: 14px;
     font-family: inherit;
-    min-height: 44px;
+    min-height: 36px;
     -webkit-user-select: text;
     user-select: text;
+    text-overflow: ellipsis;
   }
   table.sheet td.num-col input { text-align: center; font-variant-numeric: tabular-nums; }
   table.sheet tbody tr:nth-child(even) { background: #f6faf7; }
@@ -216,11 +216,7 @@
     background: #fffef4;
   }
   table.sheet td.def-cell, table.sheet td.has-pick { position: relative; }
-  table.sheet td.def-cell input, table.sheet td.has-pick input { padding-right: 36px; }
-  table.sheet td .zh-hint {
-    display: block; font-size: 10px; color: var(--muted); padding: 0 36px 4px 6px;
-    margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  table.sheet td.def-cell input, table.sheet td.has-pick input { padding-right: 32px; }
   table.sheet button.pick, table.sheet button.icon {
     min-height: 32px;
     padding: 2px 6px;
@@ -348,7 +344,7 @@
   }
   .field input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
   @media print {
-    header.app .meta, .toolbar, .bulk-prefix, #numpad, td.act, th.act, button, .search { display: none !important; }
+    header.app .meta, .toolbar, .bulk-prefix, #numpad, #speciesBar, td.act, th.act, button, .search { display: none !important; }
     body, body.numpad-open { padding: 0; background: #fff; }
     main { padding: 0; }
     .sheet-wrap { box-shadow: none; border: 0; overflow: visible; }
@@ -357,14 +353,28 @@
   #speciesBar {
     display: none;
     position: fixed;
-    left: 0; right: 0; top: 0;
+    inset: 0;
     z-index: 50;
-    background: #f3f7f4;
-    border-bottom: 1px solid #9aa59e;
-    padding: calc(8px + var(--safe-top)) 12px 10px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.16);
+    background: rgba(0,0,0,.4);
+    padding: calc(12px + var(--safe-top)) 16px calc(12px + var(--safe-bottom));
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
   }
-  body.species-open #speciesBar { display: block; }
+  body.species-open #speciesBar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #speciesBar .species-panel {
+    width: min(560px, 94vw);
+    max-height: min(86vh, 720px);
+    overflow: auto;
+    background: #f3f7f4;
+    border: 1px solid #9aa59e;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.28);
+  }
   .species-bar-top {
     display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
   }
@@ -421,14 +431,16 @@
 </header>
 
 <div id="speciesBar">
-  <div class="species-bar-top">
-    <div class="lab">品種（可打字或用 Pencil 手寫）</div>
-    <button type="button" class="secondary" id="speciesClear">清空</button>
-    <button type="button" class="secondary" id="speciesNext">下一個</button>
-    <button type="button" id="speciesDone">完成</button>
+  <div class="species-panel">
+    <div class="species-bar-top">
+      <div class="lab">品種（可打字或用 Pencil 手寫）</div>
+      <button type="button" class="secondary" id="speciesClear">清空</button>
+      <button type="button" class="secondary" id="speciesNext">下一個</button>
+      <button type="button" id="speciesDone">完成</button>
+    </div>
+    <input id="speciesInput" type="text" inputmode="text" enterkeyhint="done" lang="zh-HK" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="寫或輸入中文／學名，例如：細葉榕 或 Ficus">
+    <div class="species-suggest" id="speciesSuggest"></div>
   </div>
-  <input id="speciesInput" type="text" inputmode="text" enterkeyhint="done" lang="zh-HK" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="寫或輸入中文／學名，例如：細葉榕 或 Ficus">
-  <div class="species-suggest" id="speciesSuggest"></div>
 </div>
 <div class="toolbar">
   <div class="pager">
@@ -462,7 +474,7 @@
           <th>#</th>
           <th>Batch</th>
           <th>Tree No.</th>
-          <th>Species Name</th>
+          <th>Species</th>
           <th>H <span class="u">m</span></th>
           <th>S <span class="u">m</span></th>
           <th>DBH <span class="u">mm</span></th>
@@ -532,7 +544,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "15";
+const APP_VER = "16";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -740,7 +752,7 @@ function render() {
       if (c.key === "remarks" || c.key === "recommendation") td.className = "def-cell";
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement("input");
-      input.value = row[c.key] || "";
+      input.value = c.key === "species" ? speciesDisplay(row.species) : (row[c.key] || "");
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
       if (c.key === "remarks") input.setAttribute("list", "defectList");
@@ -757,8 +769,13 @@ function render() {
       }
       input.addEventListener("input", ev => {
         pushUndo(row.id + ":" + c.key);
-        row[c.key] = ev.target.value;
-        if (c.key === "species") updateZhHint(td, ev.target.value);
+        if (c.key === "species") {
+          row.species = resolveSpeciesValue(ev.target.value);
+          const shown = speciesDisplay(row.species);
+          if (ev.target.value !== shown) ev.target.value = shown;
+        } else {
+          row[c.key] = ev.target.value;
+        }
         save();
         updateCountAndLists();
       });
@@ -768,7 +785,6 @@ function render() {
       });
       td.appendChild(input);
       if (c.key === "species") {
-        updateZhHint(td, input.value);
         const pick = document.createElement("button");
         pick.type = "button";
         pick.className = "pick";
@@ -917,15 +933,10 @@ function bindNumInput(input) {
   });
 }
 
-function updateZhHint(td, sci) {
-  const old = td.querySelector(".zh-hint");
-  if (old) old.remove();
-  const zh = zhForSci(sci);
-  if (!zh) return;
-  const hint = document.createElement("span");
-  hint.className = "zh-hint";
-  hint.textContent = zh;
-  td.appendChild(hint);
+function speciesDisplay(val) {
+  const sp = findSpecies(val);
+  if (sp && sp.zh && sp.zh[0]) return sp.zh[0];
+  return String(val || "");
 }
 
 const NUM_LABELS = {
@@ -1151,13 +1162,8 @@ function commitSpeciesBar() {
   if (!input) return;
   const typed = document.getElementById("speciesInput").value;
   const value = resolveSpeciesValue(typed);
-  if (input.value !== value) {
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  } else {
-    const td = input.closest("td");
-    if (td) updateZhHint(td, value);
-  }
+  input.value = value;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 function renderSpeciesSuggest() {
   const q = document.getElementById("speciesInput").value;
@@ -1263,7 +1269,7 @@ function initNumpad() {
       hideKeypad();
     }
     if (document.body.classList.contains("species-open")) {
-      if (ev.target.closest("#speciesBar")) return;
+      if (ev.target.closest(".species-panel")) return;
       if (ev.target.matches && ev.target.matches("input") && ev.target.dataset.key === "species") return;
       if (ev.target.closest && ev.target.closest("button.pick")) return;
       hideSpeciesBar(true);
