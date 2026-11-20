@@ -459,6 +459,7 @@
     <button type="button" data-prefix="T">T</button>
     <button type="button" data-prefix="AT">AT</button>
     <button type="button" data-prefix="TG">TG</button>
+    <button type="button" data-prefix="⭐">⭐</button>
   </div>
   <div class="numpad-grid" id="numpadGrid"></div>
 </div>
@@ -492,7 +493,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "6";
+const APP_VER = "7";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -802,6 +803,7 @@ const NUM_ORDER = ["batch", "treeNo", "species", "h", "s", "dbh"];
 
 function treePrefix(val) {
   const s = String(val || "");
+  if (s.startsWith("⭐")) return "⭐";
   if (s.startsWith("AT")) return "AT";
   if (s.startsWith("TG")) return "TG";
   if (s.startsWith("T")) return "T";

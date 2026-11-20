@@ -2,7 +2,7 @@
 
 離線記錄場地樹木評估表（Batch、Tree No.、Species Name、H、S、DBH、Defect），並匯出 Excel。資料只在你的瀏覽器處理，不會上載到伺服器。
 
-開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=6)
+開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=7)
 
 ## iPad mini + Apple Pencil 建議用法
 
@@ -15,7 +15,7 @@
 填表方式：
 
 - **Batch**、**H / S / DBH**：撳欄位會喺下面彈出九宮格數字鍵盤（可用 Pencil 點）。Batch 同 Tree No. 係整數；H／S／DBH 可以有小數。
-- **Tree No.**：先選前綴 **T / AT / TG**，再用九宮格入數字。空欄會跟上一棵自動加 1。
+- **Tree No.**：先選前綴 **T / AT / TG / ⭐**，再用九宮格入數字。空欄會跟上一棵自動加 1。
 - **Species Name**：撳欄位會喺畫面上方開一個大輸入欄，可以打字或用 Pencil 手寫中文／學名，即時搜尋香港 TMO 清單。選中後，表內會存學名，並顯示中文提示。清單冇嘅名都可以照你寫嘅字存檔。
 
 欄位：H＝高度（m）、S＝冠幅（m）、DBH＝胸徑（mm）。匯出嘅 Excel 格式同 Tree Assessment Schedule 範本一致。
