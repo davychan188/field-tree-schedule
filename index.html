@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tree Schedule">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1b5e3b">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<title>Tree Assessment Schedule</title>
+<style>
+  :root {
+    --green: #1b5e3b;
+    --green-dark: #13462c;
+    --green-soft: #e8f3ec;
+    --line: #c5d0c8;
+    --ink: #1a1a1a;
+    --muted: #5c6b62;
+    --bg: #f4f6f4;
+    --card: #fff;
+    --danger: #a32020;
+    --warn: #8a5a00;
+    --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; }
+  button, a, .btn { touch-action: manipulation; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang HK", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  header.app {
+    background: var(--green);
+    color: #fff;
+    padding: calc(12px + var(--safe-top)) 16px 14px;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  }
+  header.app h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .01em;
+  }
+  header.app .sub {
+    margin: 2px 0 0;
+    font-size: 12px;
+    opacity: .88;
+  }
+  header.app .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    align-items: center;
+    margin-top: 10px;
+  }
+  header.app label.job {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 180px;
+  }
+  header.app input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 16px;
+    background: #fff;
+    color: var(--ink);
+  }
+  .count {
+    background: rgba(255,255,255,.16);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 16px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 92px;
+    z-index: 20;
+  }
+  button, .btn {
+    appearance: none;
+    border: 1px solid var(--green);
+    background: var(--green);
+    color: #fff;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 48px;
+  }
+  button.secondary, .btn.secondary {
+    background: #fff;
+    color: var(--green-dark);
+    border-color: #9cb8a8;
+  }
+  button.danger {
+    background: #fff;
+    color: var(--danger);
+    border-color: #e0b4b4;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  button:active { transform: translateY(1px); }
+  .search {
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+  }
+  .search input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 16px;
+    font-family: inherit;
+    min-height: 48px;
+  }
+  main { padding: 12px 16px calc(96px + var(--safe-bottom)); max-width: 1400px; margin: 0 auto; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    margin: 0 0 10px;
+    font-size: 15px;
+    color: var(--green-dark);
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 10px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field.wide { grid-column: span 2; }
+  .field label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .field label span { font-weight: 400; }
+  .field input, .field textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 10px;
+    font-size: 17px;
+    font-family: inherit;
+    min-height: 52px;
+    background: #fff;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  .field input:focus, .field textarea:focus, .search input:focus, td input:focus {
+    outline: 2px solid var(--green);
+    outline-offset: 1px;
+    border-color: var(--green);
+  }
+  .add-actions {
+    display: flex;
+    gap: 8px;
+    align-items: end;
+    grid-column: 1 / -1;
+    margin-top: 4px;
+  }
+  .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
+  .table-wrap {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    max-height: calc(100vh - 220px);
+  }
+  table.records {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 860px;
+    font-size: 15px;
+  }
+  table.records th, table.records td {
+    border-bottom: 1px solid var(--line);
+    border-right: 1px solid #e7eee9;
+    padding: 0;
+    vertical-align: middle;
+  }
+  table.records th {
+    background: var(--green);
+    color: #fff;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 8px 8px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    white-space: nowrap;
+  }
+  table.records th .u { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
+  table.records td.num { width: 44px; text-align: center; color: var(--muted); font-size: 12px; padding: 0 4px; background: #f7faf8; }
+  table.records td.act { width: 52px; text-align: center; padding: 4px; }
+  table.records td input {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 10px 8px;
+    font-size: 16px;
+    font-family: inherit;
+    min-height: 52px;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  table.records tbody tr:nth-child(even) { background: #f7fbf8; }
+  table.records tbody tr:hover { background: var(--green-soft); }
+  table.records tbody tr.hidden { display: none; }
+  table.records tbody tr.empty-row td input { color: inherit; }
+  button.icon {
+    min-height: 36px;
+    padding: 4px 8px;
+    background: #fff;
+    color: var(--danger);
+    border-color: #efd0d0;
+    font-size: 13px;
+  }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 28px 12px;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    background: #123526;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+    z-index: 50;
+    box-shadow: 0 4px 16px rgba(0,0,0,.25);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; }
+  dialog.modal {
+    border: 0;
+    border-radius: 14px;
+    padding: 0;
+    width: min(520px, 94vw);
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+  }
+  dialog.modal::backdrop { background: rgba(0,0,0,.45); }
+  .modal-body { padding: 18px 18px 16px; }
+  .modal-body h3 { margin: 0 0 8px; font-size: 17px; }
+  .modal-body p { margin: 0 0 14px; color: var(--muted); }
+  .defect-list {
+    max-height: 50vh;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin: 8px 0 12px;
+  }
+  .defect-list button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    color: var(--ink);
+    border: 0;
+    border-bottom: 1px solid #eee;
+    border-radius: 0;
+    min-height: 44px;
+    padding: 8px 12px;
+  }
+  .defect-list button:last-child { border-bottom: 0; }
+  .defect-list button.on { background: var(--green-soft); font-weight: 600; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
+  .chip {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+  #file { display: none; }
+  @media (max-width: 800px) {
+    .grid { grid-template-columns: 1fr 1fr; }
+    .field.wide { grid-column: span 2; }
+    .toolbar { top: auto; position: relative; }
+    header.app { position: sticky; }
+    .table-wrap { max-height: none; }
+  }
+  @media print {
+    header.app .meta, .toolbar, .quick, td.act, th.act, button { display: none !important; }
+    body { background: #fff; }
+    .table-wrap { box-shadow: none; max-height: none; overflow: visible; border: 0; }
+    main { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<header class="app">
+  <h1>Tree Assessment Schedule</h1>
+  <p class="sub">離線記錄 · 資料只存在呢部裝置 · 可匯出 Excel<br>iPad 可用 Apple Pencil 喺欄位直接手寫（開啟 Scribble 就會轉成文字）</p>
+  <div class="meta">
+    <label class="job">工程／檔名 <input id="job" type="text" placeholder="可選，用於匯出檔名" autocomplete="off"></label>
+    <div class="count" id="count">已記錄 0 棵</div>
+  </div>
+</header>
+<div class="toolbar">
+  <button type="button" id="btnAdd">新增一列</button>
+  <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
+  <button type="button" id="btnExport">匯出 Excel</button>
+  <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
+  <button type="button" class="danger" id="btnClear">清除全部</button>
+  <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／缺陷" autocomplete="off"></div>
+  <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
+</div>
+<main>
+  <section class="card quick">
+    <h2>快速加入</h2>
+    <form id="quick" autocomplete="off">
+      <div class="grid">
+        <div class="field">
+          <label>Batch</label>
+          <input name="batch" id="qBatch">
+        </div>
+        <div class="field">
+          <label>Tree No.</label>
+          <input name="treeNo" id="qTreeNo">
+        </div>
+        <div class="field wide">
+          <label>Species Name</label>
+          <input name="species" id="qSpecies" list="speciesList">
+        </div>
+        <div class="field">
+          <label>H <span>(m)</span></label>
+          <input name="h" id="qH" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>S <span>(m)</span></label>
+          <input name="s" id="qS" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>DBH <span>(mm)</span></label>
+          <input name="dbh" id="qDbh" inputmode="decimal">
+        </div>
+        <div class="field">
+          <label>Defect</label>
+          <input name="defect" id="qDefect" list="defectList">
+        </div>
+        <div class="add-actions">
+          <button type="submit">加入並下一棵</button>
+          <button type="button" class="secondary" id="btnPickDefect">選擇缺陷</button>
+          <span class="hint">加入後會保留 Batch／品種，Tree No. 自動 +1。H＝高度，S＝冠幅，DBH＝胸徑。</span>
+        </div>
+      </div>
+    </form>
+  </section>
+  <div class="table-wrap" id="wrap">
+    <table class="records" id="table">
+      <thead>
+        <tr>
+          <th style="width:44px">#</th>
+          <th>Batch</th>
+          <th>Tree No.</th>
+          <th>Species Name</th>
+          <th>H <span class="u">m</span></th>
+          <th>S <span class="u">m</span></th>
+          <th>DBH <span class="u">mm</span></th>
+          <th>Defect</th>
+          <th class="act"></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty">未有記錄。用上面「快速加入」，或直接匯入 Excel。</div>
+  </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<dialog class="modal" id="importDlg">
+  <div class="modal-body">
+    <h3>匯入資料</h3>
+    <p id="importMsg"></p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="importCancel">取消</button>
+      <button type="button" class="secondary" id="importAppend">加到後面</button>
+      <button type="button" id="importReplace">取代現有</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="modal" id="defectDlg">
+  <div class="modal-body">
+    <h3>選擇缺陷</h3>
+    <div class="field"><input id="defectFilter" type="search" placeholder="搜尋缺陷"></div>
+    <div class="chips" id="defectChips"></div>
+    <div class="defect-list" id="defectChoices"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="defectClear">清空已選</button>
+      <button type="button" id="defectDone">完成</button>
+    </div>
+  </div>
+</dialog>
+<script id="data-store" type="application/json">null</script>
+<datalist id="speciesList"></datalist>
+<datalist id="defectList"></datalist>
+<script>
+const STORAGE_KEY = "field-tree-schedule-v1";
+const COLS = [
+  { key: "batch", label: "Batch" },
+  { key: "treeNo", label: "Tree No." },
+  { key: "species", label: "Species Name" },
+  { key: "h", label: "H" },
+  { key: "s", label: "S" },
+  { key: "dbh", label: "DBH" },
+  { key: "defect", label: "Defect" }
+];
+const DEFECTS = ["Abnormal bark crack on branch","Abnormal bark crack on trunk","Abnormal leaf size","Asymmetric crown","Bee hive","Bending","Bird nest","Borer Frass","Borer holes","Branch topped","Broken branch","Broken branches","Bulge","Burls","Canker","Cavity on branch","Cavity on roots","Cavity on trunk","Chlorotic leaves","Climbers","Collapsed","Co-dominant branches","Co-dominant branches with included bark","Co-dominant trunks","Co-dominant trunks with included bark","Conflict with building","Conflict with traffic","Crack","Crack on branch","Crack on root","Crooks","Cross branches","Cross trunks","Dead branch","Dead branches","Dead frond","Dead fronds","Dead stub","Dead surface root","Dead tree","Dead trunk","Dead twigs","Decay on branch","Decay on roots","Decay on trunk","Dehydrated trunk","Dieback","Drooping branches","Epicormics","Epiphytic plant","Exposed dead wood on branch","Exposed dead wood on trunk","Exposed root","Fissures on branches","Fungal fruiting bodies on branch","Fungal fruiting bodies on root","Fungal fruiting bodies on trunk","Fungal fruiting bodies on trunk base","Fungal fruiting body on branch","Fungal fruiting body on root","Fungal fruiting body on trunk","Fungal fruiting body on trunk base","Fungi","Gall","Galls","Girdling roots","Hanger","Heavy lateral branch","Imbalanced crown","Included bark","Included bark with response growth","Invisible root flare","Leader broken","Leaning","Leaning due to phototropism","Leaning with self-correction","Leaning with staking","Leaning without root-plate movement","Lion tailing","Low live crown ratio","Main trunk broken","Mechanical injury","Minor dead branch","Minor dieback","Minor sap flow","Missing leader","Multiple trunks","Narrowing trunk","Old termite track","On slope","Overgrown","Over-extending branch","Parasitic plant","Penciling","Poor health","Poor taper","Previous root-plate movement","Pruning wound on branch","Pruning wound on trunk","Reduced crown","Removed","Restricted root growth","Root plate movement","Sap flow","Seasonal defoliation","Severely sparse foliage","Sign of borer","Sign of pest","Sign of pest infestation","Sign of Phauda flammans infestation","Slightly leaning","Small crown size","Sparse foliage","Spiral grain","Split","Split on branch","Split on root","Stump","Strangled by ficus seedling","Sunscald","Suspected BRRD","Suspected hollow by sounding test","Swelling","Tearing wound","Termite mud tubes","Termite track","Termite track live termite","Topped","Tree located at drainage channel embankment","Tree located near hoarding","Trunk conflict with railing","Uprooted","V-shaped crotch with included bark","Wilted apical bud","Wilted crown","Wilting","Wilting fronds","Within construction site","Wound on branch","Wound on roots","Wound on trunk","Wound on trunk union","Wound sealed by concrete"];
+
+const state = { job: "", rows: [], pendingImport: null, defectTarget: "quick" };
+
+function emptyRow() {
+  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", defect: "" };
+}
+function isFilled(row) {
+  return COLS.some(c => String(row[c.key] || "").trim() !== "");
+}
+function filledCount() {
+  return state.rows.filter(isFilled).length;
+}
+function uid() {
+  return "r" + Math.random().toString(36).slice(2, 9);
+}
+
+function load() {
+  let data = null;
+  const embedded = document.getElementById("data-store").textContent.trim();
+  if (embedded && embedded !== "null") {
+    try { data = JSON.parse(embedded); } catch (e) {}
+  }
+  if (!data) {
+    try { data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch (e) {}
+  }
+  if (data && Array.isArray(data.rows)) {
+    state.job = data.job || "";
+    state.rows = data.rows.map(r => Object.assign(emptyRow(), r, { id: r.id || uid() }));
+  }
+  if (!state.rows.length) state.rows = [emptyRowWithId()];
+}
+
+function emptyRowWithId() {
+  const r = emptyRow();
+  r.id = uid();
+  return r;
+}
+
+function save() {
+  const payload = { job: state.job, rows: state.rows, savedAt: new Date().toISOString() };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
+}
+
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 2200);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[ch]));
+}
+
+function render() {
+  document.getElementById("job").value = state.job;
+  document.getElementById("count").textContent = "已記錄 " + filledCount() + " 棵";
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const tb = document.getElementById("tbody");
+  tb.replaceChildren();
+  let shown = 0;
+  state.rows.forEach((row, i) => {
+    const hay = COLS.map(c => row[c.key] || "").join(" ").toLowerCase();
+    const hide = q && !hay.includes(q);
+    if (!hide) shown += 1;
+    const tr = document.createElement("tr");
+    tr.dataset.id = row.id;
+    if (hide) tr.className = "hidden";
+    const num = document.createElement("td");
+    num.className = "num";
+    num.textContent = String(i + 1);
+    tr.appendChild(num);
+    COLS.forEach(c => {
+      const td = document.createElement("td");
+      const input = document.createElement("input");
+      input.value = row[c.key] || "";
+      input.dataset.key = c.key;
+      input.setAttribute("aria-label", c.label);
+      if (c.key === "species") input.setAttribute("list", "speciesList");
+      if (c.key === "defect") input.setAttribute("list", "defectList");
+      if (c.key === "h" || c.key === "s" || c.key === "dbh") input.setAttribute("inputmode", "decimal");
+      input.addEventListener("input", ev => {
+        row[c.key] = ev.target.value;
+        save();
+        updateCountAndLists();
+      });
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+    const act = document.createElement("td");
+    act.className = "act";
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "icon";
+    del.textContent = "刪";
+    del.title = "刪除此列";
+    del.addEventListener("click", () => {
+      if (isFilled(row) && !confirm("刪除第 " + (i + 1) + " 列？")) return;
+      state.rows = state.rows.filter(r => r.id !== row.id);
+      if (!state.rows.length) state.rows.push(emptyRowWithId());
+      save();
+      render();
+    });
+    act.appendChild(del);
+    tr.appendChild(act);
+    tb.appendChild(tr);
+  });
+  document.getElementById("empty").style.display = state.rows.length ? "none" : "block";
+  updateCountAndLists();
+}
+
+function updateCountAndLists() {
+  document.getElementById("count").textContent = "已記錄 " + filledCount() + " 棵";
+  const names = [...new Set(state.rows.map(r => (r.species || "").trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+  const dl = document.getElementById("speciesList");
+  dl.replaceChildren();
+  names.forEach(n => {
+    const o = document.createElement("option");
+    o.value = n;
+    dl.appendChild(o);
+  });
+}
+
+function nextTreeNo(prev) {
+  const s = String(prev || "").trim();
+  if (!s) return "";
+  const m = s.match(/^(.*?)(\d+)(\s*)$/);
+  if (!m) return s;
+  return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, "0") + m[3];
+}
+
+function lastFilled() {
+  for (let i = state.rows.length - 1; i >= 0; i--) {
+    if (isFilled(state.rows[i])) return state.rows[i];
+  }
+  return null;
+}
+
+function prefillQuick() {
+  const last = lastFilled();
+  if (!last) return;
+  if (!document.getElementById("qBatch").value) document.getElementById("qBatch").value = last.batch || "";
+  if (!document.getElementById("qSpecies").value) document.getElementById("qSpecies").value = last.species || "";
+  if (!document.getElementById("qTreeNo").value) document.getElementById("qTreeNo").value = nextTreeNo(last.treeNo);
+}
+
+function addRow(row, opts) {
+  const r = Object.assign(emptyRowWithId(), row);
+  const blanks = state.rows.length === 1 && !isFilled(state.rows[0]);
+  if (blanks) state.rows = [r];
+  else state.rows.push(r);
+  save();
+  if (!opts || !opts.silent) render();
+  return r;
+}
+
+/* ---------- zip / xlsx ---------- */
+function crc32(buf) {
+  if (!crc32.t) {
+    const t = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+      t[i] = c >>> 0;
+    }
+    crc32.t = t;
+  }
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = crc32.t[(c ^ buf[i]) & 255] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function u16(n) { return new Uint8Array([n & 255, (n >>> 8) & 255]); }
+function u32(n) { return new Uint8Array([n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255]); }
+function concat(parts) {
+  const len = parts.reduce((s, p) => s + p.length, 0);
+  const out = new Uint8Array(len);
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+async function deflateRaw(data) {
+  if (typeof CompressionStream === "function") {
+    try {
+      const cs = new CompressionStream("deflate-raw");
+      const stream = new Blob([data]).stream().pipeThrough(cs);
+      const buf = await new Response(stream).arrayBuffer();
+      return { method: 8, bytes: new Uint8Array(buf) };
+    } catch (e) {}
+  }
+  return { method: 0, bytes: data };
+}
+async function inflateRaw(data) {
+  const ds = new DecompressionStream("deflate-raw");
+  const stream = new Blob([data]).stream().pipeThrough(ds);
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+async function makeZip(files) {
+  const enc = new TextEncoder();
+  const locals = [];
+  const centrals = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name);
+    const data = typeof f.data === "string" ? enc.encode(f.data) : f.data;
+    const compressed = await deflateRaw(data);
+    const crc = crc32(data);
+    const local = concat([
+      u32(0x04034b50), u16(20), u16(0), u16(compressed.method),
+      u16(0), u16(0), u32(crc), u32(compressed.bytes.length), u32(data.length),
+      u16(name.length), u16(0), name, compressed.bytes
+    ]);
+    const central = concat([
+      u32(0x02014b50), u16(20), u16(20), u16(0), u16(compressed.method),
+      u16(0), u16(0), u32(crc), u32(compressed.bytes.length), u32(data.length),
+      u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset),
+      name
+    ]);
+    locals.push(local);
+    centrals.push(central);
+    offset += local.length;
+  }
+  const center = concat(centrals);
+  const eocd = concat([
+    u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+    u32(center.length), u32(offset), u16(0)
+  ]);
+  return concat([...locals, center, eocd]);
+}
+function parseZip(buf) {
+  const v = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  const files = {};
+  let i = 0;
+  while (i + 30 <= buf.length) {
+    const sig = v.getUint32(i, true);
+    if (sig === 0x02014b50 || sig === 0x06054b50) break;
+    if (sig !== 0x04034b50) { i += 1; continue; }
+    const flag = v.getUint16(i + 6, true);
+    const method = v.getUint16(i + 8, true);
+    let comp = v.getUint32(i + 18, true);
+    let uncomp = v.getUint32(i + 22, true);
+    const nlen = v.getUint16(i + 26, true);
+    const elen = v.getUint16(i + 28, true);
+    const name = new TextDecoder().decode(buf.subarray(i + 30, i + 30 + nlen));
+    let start = i + 30 + nlen + elen;
+    if (flag & 8) {
+      // data descriptor after data; scan for signature if sizes missing
+      if (comp === 0 && uncomp === 0) {
+        let j = start;
+        while (j + 16 <= buf.length) {
+          const s = v.getUint32(j, true);
+          if (s === 0x08074b50 || s === 0x04034b50 || s === 0x02014b50) {
+            if (s === 0x08074b50) {
+              comp = v.getUint32(j + 8, true);
+              break;
+            }
+            // descriptor without signature (crc + 2 sizes)
+            break;
+          }
+          j++;
+        }
+      }
+    }
+    const data = buf.subarray(start, start + comp);
+    files[name] = { method, data, uncomp };
+    i = start + comp;
+    if (flag & 8) {
+      if (i + 4 <= buf.length && v.getUint32(i, true) === 0x08074b50) i += 16;
+      else i += 12;
+    }
+  }
+  return files;
+}
+async function zipRead(buf, name) {
+  const files = parseZip(buf);
+  const f = files[name];
+  if (!f) return null;
+  let data = f.data;
+  if (f.method === 8) data = await inflateRaw(data);
+  else if (f.method !== 0) throw new Error("不支援嘅壓縮方式");
+  return data;
+}
+
+function xmlEscape(s) {
+  return String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&apos;" }[ch]));
+}
+function colLetter(n) {
+  let s = "";
+  n += 1;
+  while (n) { n -= 1; s = String.fromCharCode(65 + (n % 26)) + s; n = Math.floor(n / 26); }
+  return s;
+}
+function isNumeric(s) {
+  const t = String(s).trim();
+  if (t === "") return false;
+  return /^-?\d+(\.\d+)?$/.test(t);
+}
+
+function buildSheetXml(rows) {
+  const headers = COLS.map(c => c.label);
+  let out = [];
+  out.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
+  out.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">');
+  out.push('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
+  const lastRow = Math.max(2 + rows.length, 2);
+  out.push('<dimension ref="A1:G' + lastRow + '"/>');
+  out.push('<sheetViews><sheetView workbookViewId="0"/></sheetViews>');
+  out.push('<sheetFormatPr defaultRowHeight="16"/>');
+  out.push('<cols>');
+  out.push('<col min="1" max="1" width="12" customWidth="1"/>');
+  out.push('<col min="2" max="2" width="14" customWidth="1"/>');
+  out.push('<col min="3" max="3" width="18.625" customWidth="1"/>');
+  out.push('<col min="4" max="6" width="8" customWidth="1"/>');
+  out.push('<col min="7" max="7" width="19.375" customWidth="1"/>');
+  out.push('</cols><sheetData>');
+  out.push('<row r="1"><c r="A1" t="inlineStr" s="1"><is><t>Tree Assessment Schedule</t></is></c></row>');
+  let h = '<row r="2">';
+  headers.forEach((name, i) => {
+    h += '<c r="' + colLetter(i) + '2" t="inlineStr" s="2"><is><t>' + xmlEscape(name) + '</t></is></c>';
+  });
+  h += '</row>';
+  out.push(h);
+  rows.forEach((row, idx) => {
+    const r = idx + 3;
+    let line = '<row r="' + r + '">';
+    COLS.forEach((c, i) => {
+      const val = String(row[c.key] == null ? "" : row[c.key]).trim();
+      if (val === "") return;
+      const ref = colLetter(i) + r;
+      if ((c.key === "h" || c.key === "s" || c.key === "dbh") && isNumeric(val)) {
+        line += '<c r="' + ref + '" s="3"><v>' + val + '</v></c>';
+      } else {
+        line += '<c r="' + ref + '" t="inlineStr" s="3"><is><t>' + xmlEscape(val) + '</t></is></c>';
+      }
+    });
+    line += '</row>';
+    out.push(line);
+  });
+  out.push('</sheetData>');
+  out.push('<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>');
+  out.push('<pageSetup paperSize="9" orientation="portrait" fitToWidth="1" fitToHeight="0"/>');
+  out.push('</worksheet>');
+  return out.join("");
+}
+
+const CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
+</Types>`;
+const RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>`;
+const WB = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="工作表1" sheetId="1" r:id="rId1"/></sheets>
+</workbook>`;
+const WB_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="3">
+<font><sz val="12"/><name val="新細明體"/></font>
+<font><sz val="12"/><name val="新細明體"/></font>
+<font><b/><sz val="12"/><name val="新細明體"/></font>
+</fonts>
+<fills count="2">
+<fill><patternFill patternType="none"/></fill>
+<fill><patternFill patternType="gray125"/></fill>
+</fills>
+<borders count="2">
+<border/>
+<border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/></border>
+</borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="4">
+<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
+<xf numFmtId="0" fontId="2" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>
+<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf>
+</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function safeName(s) {
+  return String(s || "").replace(/[\\/:*?"<>|]+/g, "_").trim();
+}
+function exportFileName(ext) {
+  const d = new Date();
+  const stamp = d.getFullYear() + String(d.getMonth()+1).padStart(2,"0") + String(d.getDate()).padStart(2,"0");
+  const job = safeName(state.job);
+  return (job ? job + "_" : "") + "Tree_Assessment_Schedule_" + stamp + ext;
+}
+
+async function exportXlsx() {
+  const rows = state.rows.filter(isFilled);
+  const zip = await makeZip([
+    { name: "[Content_Types].xml", data: CONTENT_TYPES },
+    { name: "_rels/.rels", data: RELS },
+    { name: "xl/workbook.xml", data: WB },
+    { name: "xl/_rels/workbook.xml.rels", data: WB_RELS },
+    { name: "xl/styles.xml", data: STYLES },
+    { name: "xl/worksheets/sheet1.xml", data: buildSheetXml(rows) }
+  ]);
+  downloadBlob(new Blob([zip], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), exportFileName(".xlsx"));
+  toast(rows.length ? "已匯出 " + rows.length + " 棵" : "已匯出空白表（未有記錄）");
+}
+
+function escapeScriptJson(obj) {
+  return JSON.stringify(obj).replace(/</g, "\\u003c");
+}
+
+function exportHtmlBackup() {
+  const payload = { job: state.job, rows: state.rows, savedAt: new Date().toISOString() };
+  const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML.replace(
+    /<script id="data-store" type="application\/json">[\s\S]*?<\/script>/,
+    '<script id="data-store" type="application/json">' + escapeScriptJson(payload) + "</script>"
+  );
+  downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), exportFileName(".html"));
+  toast("已下載含資料嘅 HTML 備份");
+}
+
+/* ---------- import ---------- */
+function colIndex(ref) {
+  const m = String(ref).match(/^([A-Z]+)/i);
+  if (!m) return 0;
+  let n = 0;
+  for (const ch of m[1].toUpperCase()) n = n * 26 + (ch.charCodeAt(0) - 64);
+  return n - 1;
+}
+function parseSharedStrings(xml) {
+  if (!xml) return [];
+  const out = [];
+  const re = /<si\b[^>]*>([\s\S]*?)<\/si>/g;
+  let m;
+  while ((m = re.exec(xml))) {
+    const parts = [];
+    const tre = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g;
+    let t;
+    while ((t = tre.exec(m[1]))) parts.push(decodeXml(t[1]));
+    out.push(parts.join(""));
+  }
+  return out;
+}
+function decodeXml(s) {
+  return String(s).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+}
+function parseSheetRows(sheetXml, sst) {
+  const rows = [];
+  const rowRe = /<row\b[^>]*>([\s\S]*?)<\/row>/g;
+  let rm;
+  while ((rm = rowRe.exec(sheetXml))) {
+    const cells = [];
+    const cellRe = /<c\b([^>]*)>([\s\S]*?)<\/c>|<c\b([^>]*)\/>/g;
+    let cm;
+    while ((cm = cellRe.exec(rm[1]))) {
+      const attrs = cm[1] || cm[3] || "";
+      const body = cm[2] || "";
+      const ref = (attrs.match(/\br="([^"]+)"/) || [])[1] || "";
+      const typ = (attrs.match(/\bt="([^"]+)"/) || [])[1] || "";
+      let val = "";
+      if (typ === "s") {
+        const v = (body.match(/<v[^>]*>([\s\S]*?)<\/v>/) || [])[1];
+        val = sst[Number(v)] || "";
+      } else if (typ === "inlineStr") {
+        const parts = [];
+        const tre = /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g;
+        let t;
+        while ((t = tre.exec(body))) parts.push(decodeXml(t[1]));
+        val = parts.join("");
+      } else {
+        const isv = (body.match(/<is[\s\S]*?<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/) || [])[1];
+        const v = (body.match(/<v[^>]*>([\s\S]*?)<\/v>/) || [])[1];
+        val = decodeXml(isv != null ? isv : (v != null ? v : ""));
+      }
+      if (ref) cells[colIndex(ref)] = val;
+    }
+    rows.push(cells);
+  }
+  return rows;
+}
+function mapImportedRows(table) {
+  if (!table.length) return [];
+  let headerAt = -1;
+  const aliases = {
+    batch: ["batch"],
+    treeNo: ["tree no.", "tree no", "tree number", "treeno", "tree_id", "tree id"],
+    species: ["species name", "species", "scientific name"],
+    h: ["h", "height", "height (m)", "height(m)"],
+    s: ["s", "spread", "crown spread", "crown spread (m)", "crown spread(m)"],
+    dbh: ["dbh", "dbh (mm)", "dbh(mm)"],
+    defect: ["defect", "defects"]
+  };
+  for (let i = 0; i < Math.min(table.length, 15); i++) {
+    const labels = (table[i] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
+    if (labels.some(x => x === "batch") && labels.some(x => x.includes("tree"))) { headerAt = i; break; }
+    if (labels.some(x => x === "tree no.") || labels.some(x => x === "species name")) { headerAt = i; break; }
+  }
+  if (headerAt < 0) headerAt = table[0] && String(table[0][0] || "").includes("Tree Assessment") ? 1 : 0;
+  const headers = (table[headerAt] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
+  const idx = {};
+  COLS.forEach(c => {
+    const names = aliases[c.key];
+    idx[c.key] = headers.findIndex(h => names.includes(h));
+  });
+  if (idx.batch < 0 && idx.treeNo < 0) {
+    // fallback to A-G order
+    COLS.forEach((c, i) => { if (idx[c.key] < 0) idx[c.key] = i; });
+  }
+  const out = [];
+  for (let i = headerAt + 1; i < table.length; i++) {
+    const rec = emptyRowWithId();
+    COLS.forEach(c => {
+      const j = idx[c.key];
+      rec[c.key] = j >= 0 ? String(table[i][j] == null ? "" : table[i][j]).trim() : "";
+    });
+    if (isFilled(rec)) out.push(rec);
+  }
+  return out;
+}
+
+async function importXlsx(buffer) {
+  const u8 = new Uint8Array(buffer);
+  const sstXml = await zipRead(u8, "xl/sharedStrings.xml");
+  const dec = new TextDecoder("utf-8");
+  const sst = sstXml ? parseSharedStrings(dec.decode(sstXml)) : [];
+  const wbXml = await zipRead(u8, "xl/workbook.xml");
+  let sheetPath = "xl/worksheets/sheet1.xml";
+  if (wbXml) {
+    const wb = dec.decode(wbXml);
+    const rels = await zipRead(u8, "xl/_rels/workbook.xml.rels");
+    const first = (wb.match(/<sheet\b[^>]*r:id="([^"]+)"/) || [])[1];
+    if (first && rels) {
+      const relXml = dec.decode(rels);
+      const re = new RegExp('<Relationship[^>]*Id="' + first + '"[^>]*Target="([^"]+)"');
+      const re2 = new RegExp('<Relationship[^>]*Target="([^"]+)"[^>]*Id="' + first + '"');
+      const t = (relXml.match(re) || relXml.match(re2) || [])[1];
+      if (t) sheetPath = "xl/" + t.replace(/^\//, "").replace(/^xl\//, "");
+    }
+  }
+  const sheet = await zipRead(u8, sheetPath);
+  if (!sheet) throw new Error("搵唔到工作表");
+  return mapImportedRows(parseSheetRows(dec.decode(sheet), sst));
+}
+
+function importCsv(text) {
+  const lines = [];
+  let row = [], cur = "", q = false;
+  const s = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === '"') { if (s[i+1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += ch;
+    } else {
+      if (ch === '"') q = true;
+      else if (ch === ",") { row.push(cur); cur = ""; }
+      else if (ch === "\n") { row.push(cur); lines.push(row); row = []; cur = ""; }
+      else if (ch !== "\r") cur += ch;
+    }
+  }
+  if (cur.length || row.length) { row.push(cur); lines.push(row); }
+  return mapImportedRows(lines);
+}
+
+async function handleFile(file) {
+  try {
+    const name = (file.name || "").toLowerCase();
+    let rows;
+    if (name.endsWith(".csv") || file.type === "text/csv") {
+      rows = importCsv(await file.text());
+    } else {
+      rows = await importXlsx(await file.arrayBuffer());
+    }
+    if (!rows.length) { toast("檔案裏面未見到可匯入嘅列"); return; }
+    state.pendingImport = rows;
+    document.getElementById("importMsg").textContent = "讀到 " + rows.length + " 棵。要取代而家嘅資料，定係加到後面？";
+    document.getElementById("importDlg").showModal();
+  } catch (err) {
+    console.error(err);
+    toast("匯入失敗：請用 Excel（.xlsx）或 CSV");
+  }
+}
+
+function applyImport(mode) {
+  const rows = state.pendingImport || [];
+  state.pendingImport = null;
+  document.getElementById("importDlg").close();
+  if (!rows.length) return;
+  if (mode === "replace") state.rows = rows;
+  else {
+    const onlyBlank = state.rows.length === 1 && !isFilled(state.rows[0]);
+    state.rows = onlyBlank ? rows : state.rows.concat(rows);
+  }
+  save();
+  render();
+  toast("已匯入 " + rows.length + " 棵");
+  prefillQuick();
+}
+
+/* ---------- defects picker ---------- */
+function currentDefectField() {
+  if (state.defectTarget === "quick") return document.getElementById("qDefect");
+  return document.querySelector('tr[data-id="' + state.defectTarget + '"] input[data-key="defect"]');
+}
+function parseDefects(s) {
+  return String(s || "").split(/[,;，；]+/).map(x => x.trim()).filter(Boolean);
+}
+function renderDefectPicker() {
+  const input = currentDefectField();
+  const selected = new Set(parseDefects(input ? input.value : ""));
+  const q = document.getElementById("defectFilter").value.trim().toLowerCase();
+  const chips = document.getElementById("defectChips");
+  chips.replaceChildren();
+  selected.forEach(d => {
+    const sp = document.createElement("span");
+    sp.className = "chip";
+    sp.textContent = d;
+    chips.appendChild(sp);
+  });
+  const box = document.getElementById("defectChoices");
+  box.replaceChildren();
+  DEFECTS.filter(d => !q || d.toLowerCase().includes(q)).forEach(d => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = d;
+    if (selected.has(d)) b.className = "on";
+    b.addEventListener("click", () => {
+      if (selected.has(d)) selected.delete(d); else selected.add(d);
+      if (input) {
+        input.value = [...selected].join(", ");
+        input.dispatchEvent(new Event("input"));
+      }
+      renderDefectPicker();
+    });
+    box.appendChild(b);
+  });
+}
+
+function initDefectList() {
+  const dl = document.getElementById("defectList");
+  DEFECTS.forEach(d => {
+    const o = document.createElement("option");
+    o.value = d;
+    dl.appendChild(o);
+  });
+}
+
+/* ---------- events ---------- */
+document.getElementById("job").addEventListener("input", ev => { state.job = ev.target.value; save(); });
+document.getElementById("btnAdd").addEventListener("click", () => {
+  const last = lastFilled();
+  const r = emptyRowWithId();
+  if (last) {
+    r.batch = last.batch || "";
+    r.treeNo = nextTreeNo(last.treeNo);
+    r.species = last.species || "";
+  }
+  state.rows.push(r);
+  save();
+  render();
+  const el = document.querySelector('tr[data-id="' + r.id + '"] input[data-key="treeNo"]');
+  if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
+});
+document.getElementById("btnExport").addEventListener("click", () => { exportXlsx().catch(err => { console.error(err); toast("匯出失敗"); }); });
+document.getElementById("btnHtml").addEventListener("click", exportHtmlBackup);
+document.getElementById("btnImport").addEventListener("click", () => document.getElementById("file").click());
+document.getElementById("file").addEventListener("change", ev => {
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = "";
+  if (f) handleFile(f);
+});
+document.getElementById("btnClear").addEventListener("click", () => {
+  if (!confirm("清除全部記錄？呢步唔能還原（已匯出嘅 Excel 唔受影響）。")) return;
+  state.rows = [emptyRowWithId()];
+  save();
+  render();
+  toast("已清除");
+});
+document.getElementById("q").addEventListener("input", render);
+document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
+document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
+document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
+document.getElementById("quick").addEventListener("submit", ev => {
+  ev.preventDefault();
+  const row = {
+    batch: document.getElementById("qBatch").value.trim(),
+    treeNo: document.getElementById("qTreeNo").value.trim(),
+    species: document.getElementById("qSpecies").value.trim(),
+    h: document.getElementById("qH").value.trim(),
+    s: document.getElementById("qS").value.trim(),
+    dbh: document.getElementById("qDbh").value.trim(),
+    defect: document.getElementById("qDefect").value.trim()
+  };
+  if (!isFilled(row)) { toast("請先填至少一個欄位"); return; }
+  addRow(row);
+  document.getElementById("qTreeNo").value = nextTreeNo(row.treeNo);
+  document.getElementById("qH").value = "";
+  document.getElementById("qS").value = "";
+  document.getElementById("qDbh").value = "";
+  document.getElementById("qDefect").value = "";
+  document.getElementById("qTreeNo").focus();
+  toast("已加入 " + (row.treeNo || "新列"));
+  const last = document.querySelector("#tbody tr:last-child");
+  if (last) last.scrollIntoView({ block: "nearest" });
+});
+document.getElementById("btnPickDefect").addEventListener("click", () => {
+  state.defectTarget = "quick";
+  document.getElementById("defectFilter").value = "";
+  renderDefectPicker();
+  document.getElementById("defectDlg").showModal();
+  document.getElementById("defectFilter").focus();
+});
+document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
+document.getElementById("defectDone").addEventListener("click", () => document.getElementById("defectDlg").close());
+document.getElementById("defectClear").addEventListener("click", () => {
+  const input = currentDefectField();
+  if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
+  renderDefectPicker();
+});
+document.addEventListener("keydown", ev => {
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
+    ev.preventDefault();
+    exportXlsx().catch(() => toast("匯出失敗"));
+  }
+});
+["dragenter","dragover"].forEach(ev => {
+  document.addEventListener(ev, e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+});
+document.addEventListener("drop", e => {
+  e.preventDefault();
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleFile(f);
+});
+
+initDefectList();
+load();
+render();
+prefillQuick();
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(function(){});
+}
+</script>
+</body>
+</html>
