@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="Tree Schedule">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1b5e3b">
+<meta http-equiv="Cache-Control" content="no-cache">
 <link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
@@ -130,7 +131,8 @@
     min-height: 40px;
   }
   main { padding: 8px 10px calc(16px + var(--safe-bottom)); }
-  body.numpad-open main { padding-bottom: 280px; }
+  body.numpad-open main { padding-bottom: 320px; }
+  body.species-open main { padding-top: 8px; }
   .sheet-wrap {
     overflow: auto;
     -webkit-overflow-scrolling: touch;
@@ -164,8 +166,8 @@
   }
   table.sheet th .u { display: block; font-weight: 400; font-size: 10px; opacity: .85; }
   table.sheet col.c-num { width: 36px; }
-  table.sheet col.c-batch { width: 88px; }
-  table.sheet col.c-tree { width: 110px; }
+  table.sheet col.c-batch { width: 72px; }
+  table.sheet col.c-tree { width: 118px; }
   table.sheet col.c-sp { width: auto; }
   table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 72px; }
   table.sheet col.c-def { width: 200px; }
@@ -197,8 +199,12 @@
     outline-offset: -2px;
     background: #fffef4;
   }
-  table.sheet td.def-cell { position: relative; }
-  table.sheet td.def-cell input { padding-right: 36px; }
+  table.sheet td.def-cell, table.sheet td.has-pick { position: relative; }
+  table.sheet td.def-cell input, table.sheet td.has-pick input { padding-right: 36px; }
+  table.sheet td .zh-hint {
+    display: block; font-size: 10px; color: var(--muted); padding: 0 36px 4px 6px;
+    margin-top: -6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   table.sheet button.pick, table.sheet button.icon {
     min-height: 32px;
     padding: 2px 6px;
@@ -232,7 +238,8 @@
     transition: opacity .2s;
     max-width: 90vw;
   }
-  body.numpad-open .toast { bottom: 270px; }
+  body.numpad-open .toast { bottom: 300px; }
+  body.species-open .toast { bottom: 24px; }
   .toast.show { opacity: 1; }
   dialog.modal {
     border: 0;
@@ -330,17 +337,83 @@
     main { padding: 0; }
     .sheet-wrap { box-shadow: none; border: 0; overflow: visible; }
   }
+
+  #speciesBar {
+    display: none;
+    position: fixed;
+    left: 0; right: 0; top: 0;
+    z-index: 50;
+    background: #f3f7f4;
+    border-bottom: 1px solid #9aa59e;
+    padding: calc(8px + var(--safe-top)) 12px 10px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.16);
+  }
+  body.species-open #speciesBar { display: block; }
+  .species-bar-top {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  }
+  .species-bar-top .lab { flex: 1; font-weight: 700; color: var(--green-dark); font-size: 14px; }
+  .species-bar-top button { min-height: 40px; padding: 6px 10px; }
+  #speciesInput {
+    width: 100%;
+    border: 2px solid var(--green);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 22px;
+    font-family: inherit;
+    min-height: 56px;
+    background: #fff;
+    color: var(--ink);
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  #speciesInput:focus { outline: 2px solid var(--green-dark); outline-offset: 1px; }
+  .species-suggest {
+    max-height: min(36vh, 280px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 8px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+  }
+  .species-suggest button {
+    display: block; width: 100%; text-align: left; background: #fff; color: var(--ink);
+    border: 0; border-bottom: 1px solid #eee; border-radius: 0; min-height: 48px; padding: 8px 12px;
+  }
+  .species-suggest button:last-child { border-bottom: 0; }
+  .species-suggest button.on { background: var(--green-soft); font-weight: 600; }
+  .species-suggest .zh { font-weight: 650; }
+  .species-suggest .sci { display: block; font-style: italic; color: var(--muted); font-size: 13px; }
+  .species-empty { padding: 10px 12px; color: var(--muted); font-size: 14px; }
+  .prefixes { display: none; gap: 6px; max-width: 420px; margin: 0 auto 6px; }
+  body.mode-treeno .prefixes { display: flex; }
+  .prefixes button { flex: 1; min-height: 42px; font-size: 16px; font-weight: 700; background: #fff; color: var(--green-dark); }
+  .prefixes button.on { background: var(--green); color: #fff; }
+  .numpad-grid button.fn { font-size: 16px; }
+
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Tree Assessment Schedule</h1>
-  <p class="sub">離線記錄 · 資料只存在呢部裝置 · 可匯出 Excel　·　每頁 10 項，好似 Excel 列表</p>
+  <p class="sub">離線記錄 · 每頁 10 項 · Batch／Tree No.／尺寸用九宮格 · 品種可打字、手寫或搜尋 TMO 清單</p>
   <div class="meta">
     <label class="job">工程／檔名 <input id="job" type="text" placeholder="可選，用於匯出檔名" autocomplete="off"></label>
     <div class="count" id="count">已記錄 0 棵</div>
   </div>
 </header>
+
+<div id="speciesBar">
+  <div class="species-bar-top">
+    <div class="lab">品種（可打字或用 Pencil 手寫）</div>
+    <button type="button" class="secondary" id="speciesClear">清空</button>
+    <button type="button" class="secondary" id="speciesNext">下一個</button>
+    <button type="button" id="speciesDone">完成</button>
+  </div>
+  <input id="speciesInput" type="text" inputmode="text" enterkeyhint="done" lang="zh-HK" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="寫或輸入中文／學名，例如：細葉榕 或 Ficus">
+  <div class="species-suggest" id="speciesSuggest"></div>
+</div>
 <div class="toolbar">
   <div class="pager">
     <button type="button" class="secondary" id="btnPrev">上一頁</button>
@@ -384,6 +457,11 @@
     <button type="button" class="secondary" id="numpadNext">下一個</button>
     <button type="button" id="numpadDone">完成</button>
   </div>
+  <div class="prefixes" id="numpadPrefixes">
+    <button type="button" data-prefix="T">T</button>
+    <button type="button" data-prefix="AT">AT</button>
+    <button type="button" data-prefix="TG">TG</button>
+  </div>
   <div class="numpad-grid" id="numpadGrid"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -416,6 +494,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
+const APP_VER = "3";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -427,7 +506,8 @@ const COLS = [
 ];
 const DEFECTS = ["Abnormal bark crack on branch","Abnormal bark crack on trunk","Abnormal leaf size","Asymmetric crown","Bee hive","Bending","Bird nest","Borer Frass","Borer holes","Branch topped","Broken branch","Broken branches","Bulge","Burls","Canker","Cavity on branch","Cavity on roots","Cavity on trunk","Chlorotic leaves","Climbers","Collapsed","Co-dominant branches","Co-dominant branches with included bark","Co-dominant trunks","Co-dominant trunks with included bark","Conflict with building","Conflict with traffic","Crack","Crack on branch","Crack on root","Crooks","Cross branches","Cross trunks","Dead branch","Dead branches","Dead frond","Dead fronds","Dead stub","Dead surface root","Dead tree","Dead trunk","Dead twigs","Decay on branch","Decay on roots","Decay on trunk","Dehydrated trunk","Dieback","Drooping branches","Epicormics","Epiphytic plant","Exposed dead wood on branch","Exposed dead wood on trunk","Exposed root","Fissures on branches","Fungal fruiting bodies on branch","Fungal fruiting bodies on root","Fungal fruiting bodies on trunk","Fungal fruiting bodies on trunk base","Fungal fruiting body on branch","Fungal fruiting body on root","Fungal fruiting body on trunk","Fungal fruiting body on trunk base","Fungi","Gall","Galls","Girdling roots","Hanger","Heavy lateral branch","Imbalanced crown","Included bark","Included bark with response growth","Invisible root flare","Leader broken","Leaning","Leaning due to phototropism","Leaning with self-correction","Leaning with staking","Leaning without root-plate movement","Lion tailing","Low live crown ratio","Main trunk broken","Mechanical injury","Minor dead branch","Minor dieback","Minor sap flow","Missing leader","Multiple trunks","Narrowing trunk","Old termite track","On slope","Overgrown","Over-extending branch","Parasitic plant","Penciling","Poor health","Poor taper","Previous root-plate movement","Pruning wound on branch","Pruning wound on trunk","Reduced crown","Removed","Restricted root growth","Root plate movement","Sap flow","Seasonal defoliation","Severely sparse foliage","Sign of borer","Sign of pest","Sign of pest infestation","Sign of Phauda flammans infestation","Slightly leaning","Small crown size","Sparse foliage","Spiral grain","Split","Split on branch","Split on root","Stump","Strangled by ficus seedling","Sunscald","Suspected BRRD","Suspected hollow by sounding test","Swelling","Tearing wound","Termite mud tubes","Termite track","Termite track live termite","Topped","Tree located at drainage channel embankment","Tree located near hoarding","Trunk conflict with railing","Uprooted","V-shaped crotch with included bark","Wilted apical bud","Wilted crown","Wilting","Wilting fronds","Within construction site","Wound on branch","Wound on roots","Wound on trunk","Wound on trunk union","Wound sealed by concrete"];
 
-const state = { job: "", rows: [], page: 0, pendingImport: null, defectTarget: null, numTarget: null };
+const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
+const state = { job: "", rows: [], page: 0, pendingImport: null, defectTarget: null, speciesTarget: null, numTarget: null };
 
 function emptyRow() {
   return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", defect: "" };
@@ -452,7 +532,8 @@ function filteredIndexes() {
   state.rows.forEach((row, i) => {
     if (!q) { idx.push(i); return; }
     const hay = COLS.map(c => row[c.key] || "").join(" ").toLowerCase();
-    if (hay.includes(q)) idx.push(i);
+    const zh = zhForSci(row.species);
+    if (hay.includes(q) || (zh && zh.toLowerCase().includes(q))) idx.push(i);
   });
   return idx;
 }
@@ -490,7 +571,7 @@ function load() {
 }
 
 function save() {
-  const payload = { job: state.job, rows: state.rows, page: state.page, savedAt: new Date().toISOString() };
+  const payload = { job: state.job, rows: state.rows, page: state.page, savedAt: new Date().toISOString(), ver: APP_VER };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
 }
 
@@ -500,21 +581,6 @@ function toast(msg) {
   el.classList.add("show");
   clearTimeout(toast._t);
   toast._t = setTimeout(() => el.classList.remove("show"), 2200);
-}
-
-function isNumKey(key) {
-  return key === "h" || key === "s" || key === "dbh";
-}
-
-function bindNumInput(input) {
-  input.setAttribute("inputmode", "none");
-  input.setAttribute("autocomplete", "off");
-  input.setAttribute("autocorrect", "off");
-  input.setAttribute("spellcheck", "false");
-  input.addEventListener("focus", () => showKeypad(input));
-  input.addEventListener("keydown", ev => {
-    if (ev.key === "Enter") { ev.preventDefault(); numpadAdvance(); }
-  });
 }
 
 function render() {
@@ -548,15 +614,25 @@ function render() {
       const td = document.createElement("td");
       if (isNumKey(c.key)) td.className = "num-col";
       if (c.key === "defect") td.className = "def-cell";
+      if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement("input");
       input.value = row[c.key] || "";
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
-      if (c.key === "species") input.setAttribute("list", "speciesList");
       if (c.key === "defect") input.setAttribute("list", "defectList");
       if (isNumKey(c.key)) bindNumInput(input);
+      if (c.key === "species") {
+        input.setAttribute("readonly", "readonly");
+        input.setAttribute("inputmode", "none");
+        input.addEventListener("focus", () => {
+          hideKeypad();
+          openSpeciesBar(row.id, input);
+        });
+        input.addEventListener("click", () => openSpeciesBar(row.id, input));
+      }
       input.addEventListener("input", ev => {
         row[c.key] = ev.target.value;
+        if (c.key === "species") updateZhHint(td, ev.target.value);
         save();
         updateCountAndLists();
       });
@@ -565,6 +641,20 @@ function render() {
         tr.classList.add("active");
       });
       td.appendChild(input);
+      if (c.key === "species") {
+        updateZhHint(td, input.value);
+        const pick = document.createElement("button");
+        pick.type = "button";
+        pick.className = "pick";
+        pick.textContent = "選";
+        pick.title = "搜尋或手寫品種";
+        pick.addEventListener("click", ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          hideKeypad();
+          openSpeciesBar(row.id, input);
+        });
+        td.appendChild(pick);
+      }
       if (c.key === "defect") {
         const pick = document.createElement("button");
         pick.type = "button";
@@ -616,18 +706,11 @@ function render() {
 
 function updateCountAndLists() {
   document.getElementById("count").textContent = "已記錄 " + filledCount() + " 棵";
-  const names = [...new Set(state.rows.map(r => (r.species || "").trim()).filter(Boolean))].sort((a,b) => a.localeCompare(b));
-  const dl = document.getElementById("speciesList");
-  dl.replaceChildren();
-  names.forEach(n => {
-    const o = document.createElement("option");
-    o.value = n;
-    dl.appendChild(o);
-  });
 }
 
 function goPage(delta) {
   hideKeypad();
+  hideSpeciesBar(true);
   const pages = pageCount();
   if (delta > 0 && state.page >= pages - 1) {
     if (document.getElementById("q").value.trim()) return;
@@ -644,30 +727,170 @@ function goPage(delta) {
   render();
 }
 
-/* ---------- numeric keypad ---------- */
-const NUMPAD_KEYS = ["1","2","3","4","5","6","7","8","9",".","0","⌫"];
-const NUM_LABELS = { h: "H（高度 m）", s: "S（冠幅 m）", dbh: "DBH（胸徑 mm）" };
-const NUM_ORDER = ["h","s","dbh"];
+function zhLine(sp) { return (sp.zh || []).join("／"); }
+function normSearch(s) {
+  return String(s || "").toLowerCase().replace(/×/g, "x").replace(/['’.]/g, "").replace(/\s+/g, "");
+}
+function findSpecies(text) {
+  const n = normSearch(text);
+  if (!n) return null;
+  return SPECIES.find(sp => normSearch(sp.sci) === n) ||
+    SPECIES.find(sp => (sp.zh || []).some(z => normSearch(z) === n)) ||
+    SPECIES.find(sp => (sp.aliases || []).some(a => normSearch(a) === n)) ||
+    null;
+}
+function zhForSci(sci) {
+  const sp = findSpecies(sci);
+  return sp ? zhLine(sp) : "";
+}
+function matchSpecies(q) {
+  const n = normSearch(q);
+  if (!n) return SPECIES.slice();
+  return SPECIES.filter(sp => {
+    const names = [sp.sci, ...(sp.zh || []), ...(sp.aliases || [])];
+    return names.some(x => normSearch(x).includes(n));
+  });
+}
+function resolveSpeciesValue(text) {
+  const sp = findSpecies(text);
+  return sp ? sp.sci : String(text || "").trim();
+}
+
+function isNumKey(key) { return key === "batch" || key === "treeNo" || key === "h" || key === "s" || key === "dbh"; }
+function isMeasureKey(key) { return key === "h" || key === "s" || key === "dbh"; }
+
+function nextTreeNo(prev) {
+  const s = String(prev || "").trim();
+  const m = s.match(/^(.*?)(\d+)$/);
+  if (!m) return s;
+  return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, "0");
+}
+
+function bindNumInput(input) {
+  input.setAttribute("inputmode", "none");
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("spellcheck", "false");
+  input.addEventListener("focus", () => {
+    hideSpeciesBar(false);
+    const key = input.dataset.key;
+    const tr = input.closest("tr");
+    const idx = tr ? Number(tr.dataset.index) : -1;
+    if (key === "batch" && !String(input.value || "").trim() && idx > 0) {
+      const prev = state.rows[idx - 1];
+      if (prev && prev.batch) {
+        input.value = prev.batch;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+    if (key === "treeNo" && !String(input.value || "").trim() && idx > 0) {
+      for (let i = idx - 1; i >= 0; i--) {
+        if (state.rows[i].treeNo) {
+          input.value = nextTreeNo(state.rows[i].treeNo);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          break;
+        }
+      }
+    }
+    showKeypad(input);
+  });
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); numpadAdvance(); }
+  });
+}
+
+function updateZhHint(td, sci) {
+  const old = td.querySelector(".zh-hint");
+  if (old) old.remove();
+  const zh = zhForSci(sci);
+  if (!zh) return;
+  const hint = document.createElement("span");
+  hint.className = "zh-hint";
+  hint.textContent = zh;
+  td.appendChild(hint);
+}
+
+const NUM_LABELS = {
+  batch: "Batch",
+  treeNo: "Tree No.",
+  h: "H（高度 m）",
+  s: "S（冠幅 m）",
+  dbh: "DBH（胸徑 mm）"
+};
+const NUM_ORDER = ["batch", "treeNo", "species", "h", "s", "dbh"];
+
+function treePrefix(val) {
+  const s = String(val || "");
+  if (s.startsWith("AT")) return "AT";
+  if (s.startsWith("TG")) return "TG";
+  if (s.startsWith("T")) return "T";
+  return "";
+}
 
 function showKeypad(input) {
   state.numTarget = input;
   const key = input.dataset.key;
   document.getElementById("numpadLabel").textContent = NUM_LABELS[key] || key;
   document.body.classList.add("numpad-open");
-  setTimeout(() => {
-    input.scrollIntoView({ block: "center", inline: "nearest" });
-  }, 50);
+  document.body.classList.toggle("mode-treeno", key === "treeNo");
+  syncPrefixButtons();
+  renderNumpadKeys(key);
+  setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
-  document.body.classList.remove("numpad-open");
+  document.body.classList.remove("numpad-open", "mode-treeno");
   state.numTarget = null;
+}
+function syncPrefixButtons() {
+  const val = state.numTarget ? state.numTarget.value : "";
+  const cur = treePrefix(val);
+  document.querySelectorAll("#numpadPrefixes button").forEach(b => {
+    b.classList.toggle("on", b.dataset.prefix === cur);
+  });
+}
+function setTreePrefix(prefix) {
+  const input = state.numTarget;
+  if (!input) return;
+  const s = String(input.value || "");
+  const cur = treePrefix(s);
+  const digits = cur ? s.slice(cur.length) : s;
+  input.value = prefix + digits;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  syncPrefixButtons();
+}
+function renderNumpadKeys(key) {
+  const grid = document.getElementById("numpadGrid");
+  grid.replaceChildren();
+  const keys = ["1","2","3","4","5","6","7","8","9"];
+  if (isMeasureKey(key)) keys.push(".", "0", "⌫");
+  else keys.push("清空", "0", "⌫");
+  keys.forEach(k => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k;
+    if (k === "清空" || k === "⌫") b.className = "fn";
+    b.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      numpadPress(k);
+    });
+    grid.appendChild(b);
+  });
 }
 function numpadPress(key) {
   const input = state.numTarget;
   if (!input) return;
   let v = String(input.value || "");
-  if (key === "⌫") v = v.slice(0, -1);
-  else if (key === ".") {
+  const field = input.dataset.key;
+  if (key === "⌫") {
+    if (field === "treeNo") {
+      const p = treePrefix(v);
+      if (p && v === p) v = "";
+      else v = v.slice(0, -1);
+    } else v = v.slice(0, -1);
+  } else if (key === "清空") {
+    v = field === "treeNo" ? treePrefix(v) : "";
+  } else if (key === ".") {
     if (v.includes(".")) return;
     v = v === "" ? "0." : v + ".";
   } else {
@@ -675,6 +898,19 @@ function numpadPress(key) {
   }
   input.value = v;
   input.dispatchEvent(new Event("input", { bubbles: true }));
+  if (field === "treeNo") syncPrefixButtons();
+}
+function focusField(tr, key) {
+  if (!tr) return false;
+  if (key === "species") {
+    hideKeypad();
+    const input = tr.querySelector('input[data-key="species"]');
+    if (input) { openSpeciesBar(tr.dataset.id, input); return true; }
+    return false;
+  }
+  const next = tr.querySelector('input[data-key="' + key + '"]');
+  if (next) { next.focus(); return true; }
+  return false;
 }
 function numpadAdvance() {
   const input = state.numTarget;
@@ -683,52 +919,165 @@ function numpadAdvance() {
   const key = input.dataset.key;
   const i = NUM_ORDER.indexOf(key);
   if (i >= 0 && i < NUM_ORDER.length - 1) {
-    const next = tr.querySelector('input[data-key="' + NUM_ORDER[i + 1] + '"]');
-    if (next) { next.focus(); return; }
+    if (focusField(tr, NUM_ORDER[i + 1])) return;
   }
-  const nextRow = tr.nextElementSibling;
-  if (nextRow) {
-    const next = nextRow.querySelector('input[data-key="h"]');
-    if (next) { next.focus(); return; }
-  }
-  // last cell on this page: go next page and focus H
+  const nextRow = tr && tr.nextElementSibling;
+  if (nextRow && focusField(nextRow, "batch")) return;
   if (state.page < pageCount() - 1 || !document.getElementById("q").value.trim()) {
     goPage(1);
-    const first = document.querySelector("#tbody tr input[data-key='h']");
+    const first = document.querySelector("#tbody tr input[data-key='batch']");
     if (first) first.focus();
-  } else {
-    hideKeypad();
+  } else hideKeypad();
+}
+
+function currentSpeciesInput() {
+  return document.querySelector('tr[data-id="' + state.speciesTarget + '"] input[data-key="species"]');
+}
+function openSpeciesBar(rowId, cellInput) {
+  hideKeypad();
+  state.speciesTarget = rowId;
+  const box = document.getElementById("speciesInput");
+  const cur = cellInput && cellInput.value ? cellInput.value : "";
+  const zh = zhForSci(cur);
+  box.value = zh || cur;
+  document.body.classList.add("species-open");
+  renderSpeciesSuggest();
+  setTimeout(() => {
+    box.focus();
+    try { box.setSelectionRange(box.value.length, box.value.length); } catch (e) {}
+  }, 50);
+}
+function hideSpeciesBar(commit) {
+  if (!document.body.classList.contains("species-open")) {
+    state.speciesTarget = null;
+    return;
   }
+  if (commit !== false) commitSpeciesBar();
+  document.body.classList.remove("species-open");
+  state.speciesTarget = null;
+}
+function commitSpeciesBar() {
+  const input = currentSpeciesInput();
+  if (!input) return;
+  const typed = document.getElementById("speciesInput").value;
+  const value = resolveSpeciesValue(typed);
+  if (input.value !== value) {
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  } else {
+    const td = input.closest("td");
+    if (td) updateZhHint(td, value);
+  }
+}
+function renderSpeciesSuggest() {
+  const q = document.getElementById("speciesInput").value;
+  const list = matchSpecies(q);
+  const box = document.getElementById("speciesSuggest");
+  box.replaceChildren();
+  const currentSci = normSearch(resolveSpeciesValue(q));
+  if (!q.trim()) {
+    const hint = document.createElement("div");
+    hint.className = "species-empty";
+    hint.textContent = "手寫或輸入後，會喺下面列出 TMO 清單嘅配對。";
+    box.appendChild(hint);
+    return;
+  }
+  if (!list.length) {
+    const hint = document.createElement("div");
+    hint.className = "species-empty";
+    hint.textContent = "清單未有呢個名，完成後會照你寫嘅字存檔。";
+    box.appendChild(hint);
+    return;
+  }
+  list.slice(0, 40).forEach(sp => {
+    const b = document.createElement("button");
+    b.type = "button";
+    if (normSearch(sp.sci) === currentSci) b.className = "on";
+    const zh = document.createElement("span");
+    zh.className = "zh";
+    zh.textContent = zhLine(sp);
+    const sci = document.createElement("span");
+    sci.className = "sci";
+    sci.textContent = sp.sci;
+    b.appendChild(zh);
+    b.appendChild(sci);
+    b.addEventListener("click", () => {
+      document.getElementById("speciesInput").value = zhLine(sp);
+      const input = currentSpeciesInput();
+      if (input) {
+        input.value = sp.sci;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      hideSpeciesBar(false);
+      const tr = input && input.closest("tr");
+      const h = tr && tr.querySelector('input[data-key="h"]');
+      if (h) h.focus();
+    });
+    box.appendChild(b);
+  });
+}
+function speciesAdvance() {
+  const input = currentSpeciesInput();
+  hideSpeciesBar(true);
+  const tr = input && input.closest("tr");
+  const h = tr && tr.querySelector('input[data-key="h"]');
+  if (h) h.focus();
+}
+function initSpeciesBar() {
+  const box = document.getElementById("speciesInput");
+  box.addEventListener("input", renderSpeciesSuggest);
+  box.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); speciesAdvance(); }
+    if (ev.key === "Escape") { ev.preventDefault(); hideSpeciesBar(true); }
+  });
+  document.getElementById("speciesDone").addEventListener("click", ev => {
+    ev.preventDefault();
+    hideSpeciesBar(true);
+  });
+  document.getElementById("speciesNext").addEventListener("click", ev => {
+    ev.preventDefault();
+    speciesAdvance();
+  });
+  document.getElementById("speciesClear").addEventListener("click", ev => {
+    ev.preventDefault();
+    box.value = "";
+    const input = currentSpeciesInput();
+    if (input) {
+      input.value = "";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    renderSpeciesSuggest();
+    box.focus();
+  });
 }
 
 function initNumpad() {
-  const grid = document.getElementById("numpadGrid");
-  NUMPAD_KEYS.forEach(k => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = k;
-    if (k === "⌫") b.className = "wide";
+  document.querySelectorAll("#numpadPrefixes button").forEach(b => {
     b.addEventListener("pointerdown", ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      numpadPress(k);
+      ev.preventDefault(); ev.stopPropagation();
+      setTreePrefix(b.dataset.prefix);
     });
-    grid.appendChild(b);
   });
   document.getElementById("numpadDone").addEventListener("pointerdown", ev => {
     ev.preventDefault();
     hideKeypad();
   });
   document.getElementById("numpadNext").addEventListener("pointerdown", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
+    ev.preventDefault(); ev.stopPropagation();
     numpadAdvance();
   });
   document.addEventListener("pointerdown", ev => {
-    if (!document.body.classList.contains("numpad-open")) return;
-    if (ev.target.closest("#numpad")) return;
-    if (ev.target.matches && ev.target.matches("input") && isNumKey(ev.target.dataset.key)) return;
-    hideKeypad();
+    if (document.body.classList.contains("numpad-open")) {
+      if (ev.target.closest("#numpad")) return;
+      if (ev.target.matches && ev.target.matches("input") && isNumKey(ev.target.dataset.key)) return;
+      hideKeypad();
+    }
+    if (document.body.classList.contains("species-open")) {
+      if (ev.target.closest("#speciesBar")) return;
+      if (ev.target.matches && ev.target.matches("input") && ev.target.dataset.key === "species") return;
+      if (ev.target.closest && ev.target.closest("button.pick")) return;
+      hideSpeciesBar(true);
+    }
   });
 }
 
@@ -1253,6 +1602,7 @@ document.getElementById("file").addEventListener("change", ev => {
 document.getElementById("btnClear").addEventListener("click", () => {
   if (!confirm("清除全部記錄？呢步唔能還原（已匯出嘅 Excel 唔受影響）。")) return;
   hideKeypad();
+  hideSpeciesBar(false);
   state.rows = [];
   state.page = 0;
   padToPageMultiple();
@@ -1288,6 +1638,7 @@ document.addEventListener("drop", e => {
 
 initDefectList();
 initNumpad();
+initSpeciesBar();
 load();
 render();
 if ("serviceWorker" in navigator) {
