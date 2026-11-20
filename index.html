@@ -443,7 +443,7 @@
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
 <div class="bulk-prefix" id="bulkPrefix">
-  <span class="lab">新 Tree No. 前綴</span>
+  <span class="lab">按順序填本頁 Tree No.</span>
   <button type="button" data-prefix="T">T</button>
   <button type="button" data-prefix="AT">AT</button>
   <button type="button" data-prefix="TG">TG</button>
@@ -530,7 +530,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "13";
+const APP_VER = "14";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -805,13 +805,6 @@ function resolveSpeciesValue(text) {
 function isNumKey(key) { return key === "batch" || key === "treeNo" || key === "h" || key === "s" || key === "dbh"; }
 function isMeasureKey(key) { return key === "h" || key === "s" || key === "dbh"; }
 
-function nextTreeNo(prev) {
-  const s = String(prev || "").trim();
-  const m = s.match(/^(.*?)(\d+)$/);
-  if (!m) return s;
-  return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, "0");
-}
-
 function bindNumInput(input) {
   input.setAttribute("inputmode", "none");
   input.setAttribute("autocomplete", "off");
@@ -829,23 +822,9 @@ function bindNumInput(input) {
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
     }
-    if (key === "treeNo") {
-      const wasEmpty = !String(input.value || "").trim();
-      if (wasEmpty && idx > 0) {
-        for (let i = idx - 1; i >= 0; i--) {
-          if (state.rows[i].treeNo) {
-            input.value = nextTreeNo(state.rows[i].treeNo);
-            input.dispatchEvent(new Event("input", { bubbles: true }));
-            break;
-          }
-        }
-      }
-      if (wasEmpty && state.treePrefix) {
-        const cur = parseTreeNo(input.value);
-        cur.prefix = state.treePrefix;
-        input.value = formatTreeNo(cur);
-        input.dispatchEvent(new Event("input", { bubbles: true }));
-      }
+    if (key === "treeNo" && !String(input.value || "").trim() && state.treePrefix) {
+      input.value = formatTreeNo({ star: false, prefix: state.treePrefix, rest: "" });
+      input.dispatchEvent(new Event("input", { bubbles: true }));
     }
     showKeypad(input);
   });
@@ -899,11 +878,43 @@ function syncBulkPrefixButtons() {
     b.classList.toggle("on", b.dataset.prefix === state.treePrefix);
   });
 }
+function lastTreeSerial() {
+  let last = 0, width = 1;
+  state.rows.forEach(row => {
+    const p = parseTreeNo(row.treeNo);
+    const m = String(p.rest || "").trim().match(/^(\d+)$/);
+    if (m) {
+      last = Number(m[1]);
+      width = Math.max(width, m[1].length);
+    }
+  });
+  return { last, width };
+}
+function currentPageIndexes() {
+  const indexes = filteredIndexes();
+  const start = state.page * PAGE_SIZE;
+  return indexes.slice(start, start + PAGE_SIZE);
+}
 function applyBulkTreePrefix(prefix) {
   state.treePrefix = prefix;
+  const pageIdx = currentPageIndexes();
+  const { last, width } = lastTreeSerial();
+  let n = last;
+  let first = null, end = null, count = 0;
+  pageIdx.forEach(i => {
+    if (String(state.rows[i].treeNo || "").trim()) return;
+    n += 1;
+    const rest = String(n).padStart(width, "0");
+    state.rows[i].treeNo = formatTreeNo({ star: false, prefix: prefix, rest: rest });
+    if (first == null) first = rest;
+    end = rest;
+    count += 1;
+  });
   save();
   syncBulkPrefixButtons();
-  toast("之後新入嘅 Tree No. 會用 " + prefix + "，已輸入嘅唔會改");
+  render();
+  if (count) toast("已按順序填入本頁 " + count + " 個：" + prefix + first + (count > 1 ? "–" + prefix + end : "") + "。已有編號嘅唔會改");
+  else toast("本頁 Tree No. 都已有編號，冇改動");
 }
 function initBulkPrefix() {
   document.querySelectorAll("#bulkPrefix button").forEach(b => {
