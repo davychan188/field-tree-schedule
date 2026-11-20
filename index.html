@@ -432,7 +432,7 @@
     <table class="sheet" id="table">
       <colgroup>
         <col class="c-num"><col class="c-batch"><col class="c-tree"><col class="c-sp">
-        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def"><col class="c-act">
+        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def">
       </colgroup>
       <thead>
         <tr>
@@ -444,7 +444,6 @@
           <th>S <span class="u">m</span></th>
           <th>DBH <span class="u">mm</span></th>
           <th>Defect</th>
-          <th class="act"></th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -494,7 +493,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "4";
+const APP_VER = "5";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -674,26 +673,9 @@ function render() {
       }
       tr.appendChild(td);
     });
-    const act = document.createElement("td");
-    act.className = "act";
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "icon";
-    del.textContent = "刪";
-    del.title = "刪除此列";
-    del.addEventListener("click", () => {
-      if (isFilled(row) && !confirm("刪除第 " + (rowIndex + 1) + " 列？")) return;
-      hideKeypad();
-      state.rows.splice(rowIndex, 1);
-      padToPageMultiple();
-      save();
-      render();
-    });
-    act.appendChild(del);
-    tr.appendChild(act);
     tb.appendChild(tr);
   });
-  // if this page has fewer than 10 because of search, leave as-is
+  // if this page has fewer rows because of search, leave as-is
   updateCountAndLists();
   if (keepRowId && keepKey) {
     const el = document.querySelector('tr[data-id="' + keepRowId + '"] input[data-key="' + keepKey + '"]');
