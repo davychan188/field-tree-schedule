@@ -17,14 +17,13 @@
     --green: #1b5e3b;
     --green-dark: #13462c;
     --green-soft: #e8f3ec;
-    --line: #c5d0c8;
+    --line: #c3cdc7;
     --ink: #1a1a1a;
     --muted: #5c6b62;
-    --bg: #f4f6f4;
+    --bg: #e9eee9;
     --card: #fff;
     --danger: #a32020;
-    --warn: #8a5a00;
-    --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --header-h: 0px;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
   }
@@ -36,34 +35,21 @@
     color: var(--ink);
     background: var(--bg);
     font-size: 16px;
-    line-height: 1.4;
+    line-height: 1.35;
   }
   header.app {
     background: var(--green);
     color: #fff;
-    padding: calc(12px + var(--safe-top)) 16px 14px;
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+    padding: calc(8px + var(--safe-top)) 12px 8px;
   }
-  header.app h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    letter-spacing: .01em;
-  }
-  header.app .sub {
-    margin: 2px 0 0;
-    font-size: 12px;
-    opacity: .88;
-  }
+  header.app h1 { margin: 0; font-size: 17px; font-weight: 700; }
+  header.app .sub { margin: 2px 0 0; font-size: 11px; opacity: .88; }
   header.app .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 16px;
+    gap: 8px 12px;
     align-items: center;
-    margin-top: 10px;
+    margin-top: 8px;
   }
   header.app label.job {
     display: flex;
@@ -71,14 +57,14 @@
     gap: 6px;
     font-size: 13px;
     flex: 1;
-    min-width: 180px;
+    min-width: 160px;
   }
   header.app input[type="text"] {
     flex: 1;
     min-width: 0;
     border: 0;
     border-radius: 6px;
-    padding: 8px 10px;
+    padding: 7px 10px;
     font-size: 16px;
     background: #fff;
     color: var(--ink);
@@ -93,13 +79,11 @@
   .toolbar {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px 16px;
-    background: var(--card);
+    gap: 6px;
+    padding: 8px 12px;
+    background: #f4f7f5;
     border-bottom: 1px solid var(--line);
-    position: sticky;
-    top: 92px;
-    z-index: 20;
+    align-items: center;
   }
   button, .btn {
     appearance: none;
@@ -107,11 +91,11 @@
     background: var(--green);
     color: #fff;
     border-radius: 8px;
-    padding: 9px 12px;
-    font-size: 15px;
+    padding: 8px 11px;
+    font-size: 14px;
     font-family: inherit;
     cursor: pointer;
-    min-height: 48px;
+    min-height: 40px;
   }
   button.secondary, .btn.secondary {
     background: #fff;
@@ -123,138 +107,114 @@
     color: var(--danger);
     border-color: #e0b4b4;
   }
-  button:disabled { opacity: .45; cursor: default; }
+  button:disabled { opacity: .4; cursor: default; }
   button:active { transform: translateY(1px); }
-  .search {
-    flex: 1;
-    min-width: 160px;
-    position: relative;
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--green-dark);
+    white-space: nowrap;
   }
+  .search { flex: 1; min-width: 140px; }
   .search input {
     width: 100%;
     border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 9px 12px;
+    padding: 8px 10px;
     font-size: 16px;
     font-family: inherit;
-    min-height: 48px;
+    min-height: 40px;
   }
-  main { padding: 12px 16px calc(96px + var(--safe-bottom)); max-width: 1400px; margin: 0 auto; }
-  .card {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 14px;
-    margin-bottom: 14px;
-  }
-  .card h2 {
-    margin: 0 0 10px;
-    font-size: 15px;
-    color: var(--green-dark);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px 10px;
-  }
-  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-  .field.wide { grid-column: span 2; }
-  .field label {
-    font-size: 12px;
-    color: var(--muted);
-    font-weight: 600;
-  }
-  .field label span { font-weight: 400; }
-  .field input, .field textarea {
-    width: 100%;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 10px 10px;
-    font-size: 17px;
-    font-family: inherit;
-    min-height: 52px;
-    background: #fff;
-    -webkit-user-select: text;
-    user-select: text;
-  }
-  .field input:focus, .field textarea:focus, .search input:focus, td input:focus {
-    outline: 2px solid var(--green);
-    outline-offset: 1px;
-    border-color: var(--green);
-  }
-  .add-actions {
-    display: flex;
-    gap: 8px;
-    align-items: end;
-    grid-column: 1 / -1;
-    margin-top: 4px;
-  }
-  .hint { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
-  .table-wrap {
+  main { padding: 8px 10px calc(16px + var(--safe-bottom)); }
+  body.numpad-open main { padding-bottom: 280px; }
+  .sheet-wrap {
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    background: var(--card);
-    box-shadow: var(--shadow);
-    max-height: calc(100vh - 220px);
+    background: #fff;
+    border: 1px solid #8fa196;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
   }
-  table.records {
+  table.sheet {
     border-collapse: collapse;
     width: 100%;
-    min-width: 860px;
+    min-width: 780px;
+    table-layout: fixed;
     font-size: 15px;
   }
-  table.records th, table.records td {
-    border-bottom: 1px solid var(--line);
-    border-right: 1px solid #e7eee9;
+  table.sheet th, table.sheet td {
+    border: 1px solid #b7c2bb;
     padding: 0;
     vertical-align: middle;
   }
-  table.records th {
-    background: var(--green);
+  table.sheet th {
+    background: #1b5e3b;
     color: #fff;
     font-weight: 600;
     font-size: 13px;
-    padding: 8px 8px;
-    text-align: left;
+    padding: 7px 6px;
+    text-align: center;
     position: sticky;
     top: 0;
     z-index: 5;
     white-space: nowrap;
   }
-  table.records th .u { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
-  table.records td.num { width: 44px; text-align: center; color: var(--muted); font-size: 12px; padding: 0 4px; background: #f7faf8; }
-  table.records td.act { width: 52px; text-align: center; padding: 4px; }
-  table.records td input {
+  table.sheet th .u { display: block; font-weight: 400; font-size: 10px; opacity: .85; }
+  table.sheet col.c-num { width: 36px; }
+  table.sheet col.c-batch { width: 88px; }
+  table.sheet col.c-tree { width: 110px; }
+  table.sheet col.c-sp { width: auto; }
+  table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 72px; }
+  table.sheet col.c-def { width: 200px; }
+  table.sheet col.c-act { width: 44px; }
+  table.sheet td.num {
+    text-align: center;
+    color: #4d5c54;
+    font-size: 12px;
+    background: #eef3ef;
+    font-variant-numeric: tabular-nums;
+  }
+  table.sheet td.act { text-align: center; padding: 2px; background: #f7faf8; }
+  table.sheet td input {
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 10px 8px;
+    padding: 8px 6px;
     font-size: 16px;
     font-family: inherit;
-    min-height: 52px;
+    min-height: 44px;
     -webkit-user-select: text;
     user-select: text;
   }
-  table.records tbody tr:nth-child(even) { background: #f7fbf8; }
-  table.records tbody tr:hover { background: var(--green-soft); }
-  table.records tbody tr.hidden { display: none; }
-  table.records tbody tr.empty-row td input { color: inherit; }
-  button.icon {
-    min-height: 36px;
-    padding: 4px 8px;
+  table.sheet td.num-col input { text-align: center; font-variant-numeric: tabular-nums; }
+  table.sheet tbody tr:nth-child(even) { background: #f6faf7; }
+  table.sheet tbody tr.active { background: #e7f4eb; }
+  table.sheet td input:focus {
+    outline: 2px solid var(--green);
+    outline-offset: -2px;
+    background: #fffef4;
+  }
+  table.sheet td.def-cell { position: relative; }
+  table.sheet td.def-cell input { padding-right: 36px; }
+  table.sheet button.pick, table.sheet button.icon {
+    min-height: 32px;
+    padding: 2px 6px;
+    font-size: 12px;
     background: #fff;
-    color: var(--danger);
-    border-color: #efd0d0;
-    font-size: 13px;
+    border-radius: 6px;
   }
-  .empty {
-    text-align: center;
-    color: var(--muted);
-    padding: 28px 12px;
+  table.sheet button.pick {
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--green-dark);
+    border-color: #c5d5cb;
   }
+  table.sheet button.icon { color: var(--danger); border-color: #efd0d0; }
   .toast {
     position: fixed;
     left: 50%;
@@ -265,13 +225,14 @@
     padding: 10px 16px;
     border-radius: 999px;
     font-size: 14px;
-    z-index: 50;
+    z-index: 60;
     box-shadow: 0 4px 16px rgba(0,0,0,.25);
     opacity: 0;
     pointer-events: none;
     transition: opacity .2s;
     max-width: 90vw;
   }
+  body.numpad-open .toast { bottom: 270px; }
   .toast.show { opacity: 1; }
   dialog.modal {
     border: 0;
@@ -315,85 +276,94 @@
   }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   #file { display: none; }
-  @media (max-width: 800px) {
-    .grid { grid-template-columns: 1fr 1fr; }
-    .field.wide { grid-column: span 2; }
-    .toolbar { top: auto; position: relative; }
-    header.app { position: sticky; }
-    .table-wrap { max-height: none; }
+  #numpad {
+    display: none;
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 40;
+    background: #cfd6d1;
+    border-top: 1px solid #9aa59e;
+    padding: 8px 10px calc(8px + var(--safe-bottom));
+    box-shadow: 0 -6px 20px rgba(0,0,0,.16);
   }
+  body.numpad-open #numpad { display: block; }
+  .numpad-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 420px;
+    margin: 0 auto 6px;
+  }
+  .numpad-bar .lab { flex: 1; font-weight: 700; color: var(--green-dark); font-size: 14px; }
+  .numpad-bar button { min-height: 40px; padding: 6px 12px; }
+  .numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    max-width: 420px;
+    margin: 0 auto;
+  }
+  .numpad-grid button {
+    min-height: 50px;
+    font-size: 22px;
+    font-weight: 650;
+    background: #fff;
+    color: #111;
+    border: 1px solid #b0b8b3;
+    border-radius: 8px;
+  }
+  .numpad-grid button.wide { font-size: 20px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field input {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 16px;
+    font-family: inherit;
+    min-height: 42px;
+  }
+  .field input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
   @media print {
-    header.app .meta, .toolbar, .quick, td.act, th.act, button { display: none !important; }
-    body { background: #fff; }
-    .table-wrap { box-shadow: none; max-height: none; overflow: visible; border: 0; }
+    header.app .meta, .toolbar, #numpad, td.act, th.act, button, .search { display: none !important; }
+    body, body.numpad-open { padding: 0; background: #fff; }
     main { padding: 0; }
+    .sheet-wrap { box-shadow: none; border: 0; overflow: visible; }
   }
 </style>
 </head>
 <body>
 <header class="app">
   <h1>Tree Assessment Schedule</h1>
-  <p class="sub">離線記錄 · 資料只存在呢部裝置 · 可匯出 Excel<br>iPad 可用 Apple Pencil 喺欄位直接手寫（開啟 Scribble 就會轉成文字）</p>
+  <p class="sub">離線記錄 · 資料只存在呢部裝置 · 可匯出 Excel　·　每頁 10 項，好似 Excel 列表</p>
   <div class="meta">
     <label class="job">工程／檔名 <input id="job" type="text" placeholder="可選，用於匯出檔名" autocomplete="off"></label>
     <div class="count" id="count">已記錄 0 棵</div>
   </div>
 </header>
 <div class="toolbar">
-  <button type="button" id="btnAdd">新增一列</button>
-  <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
+  <div class="pager">
+    <button type="button" class="secondary" id="btnPrev">上一頁</button>
+    <span id="pageLabel">第 1 / 1 頁</span>
+    <button type="button" class="secondary" id="btnNext">下一頁</button>
+  </div>
   <button type="button" id="btnExport">匯出 Excel</button>
+  <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
   <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
   <button type="button" class="danger" id="btnClear">清除全部</button>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／缺陷" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
 <main>
-  <section class="card quick">
-    <h2>快速加入</h2>
-    <form id="quick" autocomplete="off">
-      <div class="grid">
-        <div class="field">
-          <label>Batch</label>
-          <input name="batch" id="qBatch">
-        </div>
-        <div class="field">
-          <label>Tree No.</label>
-          <input name="treeNo" id="qTreeNo">
-        </div>
-        <div class="field wide">
-          <label>Species Name</label>
-          <input name="species" id="qSpecies" list="speciesList">
-        </div>
-        <div class="field">
-          <label>H <span>(m)</span></label>
-          <input name="h" id="qH" inputmode="decimal">
-        </div>
-        <div class="field">
-          <label>S <span>(m)</span></label>
-          <input name="s" id="qS" inputmode="decimal">
-        </div>
-        <div class="field">
-          <label>DBH <span>(mm)</span></label>
-          <input name="dbh" id="qDbh" inputmode="decimal">
-        </div>
-        <div class="field">
-          <label>Defect</label>
-          <input name="defect" id="qDefect" list="defectList">
-        </div>
-        <div class="add-actions">
-          <button type="submit">加入並下一棵</button>
-          <button type="button" class="secondary" id="btnPickDefect">選擇缺陷</button>
-          <span class="hint">加入後會保留 Batch／品種，Tree No. 自動 +1。H＝高度，S＝冠幅，DBH＝胸徑。</span>
-        </div>
-      </div>
-    </form>
-  </section>
-  <div class="table-wrap" id="wrap">
-    <table class="records" id="table">
+  <div class="sheet-wrap" id="wrap">
+    <table class="sheet" id="table">
+      <colgroup>
+        <col class="c-num"><col class="c-batch"><col class="c-tree"><col class="c-sp">
+        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def"><col class="c-act">
+      </colgroup>
       <thead>
         <tr>
-          <th style="width:44px">#</th>
+          <th>#</th>
           <th>Batch</th>
           <th>Tree No.</th>
           <th>Species Name</th>
@@ -406,9 +376,16 @@
       </thead>
       <tbody id="tbody"></tbody>
     </table>
-    <div class="empty" id="empty">未有記錄。用上面「快速加入」，或直接匯入 Excel。</div>
   </div>
 </main>
+<div id="numpad">
+  <div class="numpad-bar">
+    <div class="lab" id="numpadLabel">H（m）</div>
+    <button type="button" class="secondary" id="numpadNext">下一個</button>
+    <button type="button" id="numpadDone">完成</button>
+  </div>
+  <div class="numpad-grid" id="numpadGrid"></div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 <dialog class="modal" id="importDlg">
   <div class="modal-body">
@@ -438,18 +415,19 @@
 <datalist id="defectList"></datalist>
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
+const PAGE_SIZE = 10;
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
-  { key: "h", label: "H" },
-  { key: "s", label: "S" },
-  { key: "dbh", label: "DBH" },
+  { key: "h", label: "H", unit: "m" },
+  { key: "s", label: "S", unit: "m" },
+  { key: "dbh", label: "DBH", unit: "mm" },
   { key: "defect", label: "Defect" }
 ];
 const DEFECTS = ["Abnormal bark crack on branch","Abnormal bark crack on trunk","Abnormal leaf size","Asymmetric crown","Bee hive","Bending","Bird nest","Borer Frass","Borer holes","Branch topped","Broken branch","Broken branches","Bulge","Burls","Canker","Cavity on branch","Cavity on roots","Cavity on trunk","Chlorotic leaves","Climbers","Collapsed","Co-dominant branches","Co-dominant branches with included bark","Co-dominant trunks","Co-dominant trunks with included bark","Conflict with building","Conflict with traffic","Crack","Crack on branch","Crack on root","Crooks","Cross branches","Cross trunks","Dead branch","Dead branches","Dead frond","Dead fronds","Dead stub","Dead surface root","Dead tree","Dead trunk","Dead twigs","Decay on branch","Decay on roots","Decay on trunk","Dehydrated trunk","Dieback","Drooping branches","Epicormics","Epiphytic plant","Exposed dead wood on branch","Exposed dead wood on trunk","Exposed root","Fissures on branches","Fungal fruiting bodies on branch","Fungal fruiting bodies on root","Fungal fruiting bodies on trunk","Fungal fruiting bodies on trunk base","Fungal fruiting body on branch","Fungal fruiting body on root","Fungal fruiting body on trunk","Fungal fruiting body on trunk base","Fungi","Gall","Galls","Girdling roots","Hanger","Heavy lateral branch","Imbalanced crown","Included bark","Included bark with response growth","Invisible root flare","Leader broken","Leaning","Leaning due to phototropism","Leaning with self-correction","Leaning with staking","Leaning without root-plate movement","Lion tailing","Low live crown ratio","Main trunk broken","Mechanical injury","Minor dead branch","Minor dieback","Minor sap flow","Missing leader","Multiple trunks","Narrowing trunk","Old termite track","On slope","Overgrown","Over-extending branch","Parasitic plant","Penciling","Poor health","Poor taper","Previous root-plate movement","Pruning wound on branch","Pruning wound on trunk","Reduced crown","Removed","Restricted root growth","Root plate movement","Sap flow","Seasonal defoliation","Severely sparse foliage","Sign of borer","Sign of pest","Sign of pest infestation","Sign of Phauda flammans infestation","Slightly leaning","Small crown size","Sparse foliage","Spiral grain","Split","Split on branch","Split on root","Stump","Strangled by ficus seedling","Sunscald","Suspected BRRD","Suspected hollow by sounding test","Swelling","Tearing wound","Termite mud tubes","Termite track","Termite track live termite","Topped","Tree located at drainage channel embankment","Tree located near hoarding","Trunk conflict with railing","Uprooted","V-shaped crotch with included bark","Wilted apical bud","Wilted crown","Wilting","Wilting fronds","Within construction site","Wound on branch","Wound on roots","Wound on trunk","Wound on trunk union","Wound sealed by concrete"];
 
-const state = { job: "", rows: [], pendingImport: null, defectTarget: "quick" };
+const state = { job: "", rows: [], page: 0, pendingImport: null, defectTarget: null, numTarget: null };
 
 function emptyRow() {
   return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", defect: "" };
@@ -462,6 +440,35 @@ function filledCount() {
 }
 function uid() {
   return "r" + Math.random().toString(36).slice(2, 9);
+}
+function emptyRowWithId() {
+  const r = emptyRow();
+  r.id = uid();
+  return r;
+}
+function filteredIndexes() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const idx = [];
+  state.rows.forEach((row, i) => {
+    if (!q) { idx.push(i); return; }
+    const hay = COLS.map(c => row[c.key] || "").join(" ").toLowerCase();
+    if (hay.includes(q)) idx.push(i);
+  });
+  return idx;
+}
+function pageCount() {
+  return Math.max(1, Math.ceil(filteredIndexes().length / PAGE_SIZE));
+}
+function padToPageMultiple() {
+  if (document.getElementById("q").value.trim()) return;
+  if (!state.rows.length) {
+    for (let i = 0; i < PAGE_SIZE; i++) state.rows.push(emptyRowWithId());
+    return;
+  }
+  const rem = state.rows.length % PAGE_SIZE;
+  if (rem !== 0) {
+    for (let i = 0; i < PAGE_SIZE - rem; i++) state.rows.push(emptyRowWithId());
+  }
 }
 
 function load() {
@@ -476,18 +483,14 @@ function load() {
   if (data && Array.isArray(data.rows)) {
     state.job = data.job || "";
     state.rows = data.rows.map(r => Object.assign(emptyRow(), r, { id: r.id || uid() }));
+    if (typeof data.page === "number") state.page = data.page;
   }
-  if (!state.rows.length) state.rows = [emptyRowWithId()];
-}
-
-function emptyRowWithId() {
-  const r = emptyRow();
-  r.id = uid();
-  return r;
+  padToPageMultiple();
+  if (state.page > pageCount() - 1) state.page = 0;
 }
 
 function save() {
-  const payload = { job: state.job, rows: state.rows, savedAt: new Date().toISOString() };
+  const payload = { job: state.job, rows: state.rows, page: state.page, savedAt: new Date().toISOString() };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
 }
 
@@ -499,43 +502,86 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[ch]));
+function isNumKey(key) {
+  return key === "h" || key === "s" || key === "dbh";
+}
+
+function bindNumInput(input) {
+  input.setAttribute("inputmode", "none");
+  input.setAttribute("autocomplete", "off");
+  input.setAttribute("autocorrect", "off");
+  input.setAttribute("spellcheck", "false");
+  input.addEventListener("focus", () => showKeypad(input));
+  input.addEventListener("keydown", ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); numpadAdvance(); }
+  });
 }
 
 function render() {
+  padToPageMultiple();
+  const pages = pageCount();
+  if (state.page >= pages) state.page = pages - 1;
+  if (state.page < 0) state.page = 0;
   document.getElementById("job").value = state.job;
   document.getElementById("count").textContent = "已記錄 " + filledCount() + " 棵";
-  const q = document.getElementById("q").value.trim().toLowerCase();
+  document.getElementById("pageLabel").textContent = "第 " + (state.page + 1) + " / " + pages + " 頁";
+  document.getElementById("btnPrev").disabled = state.page <= 0;
+  document.getElementById("btnNext").disabled = false;
+  const indexes = filteredIndexes();
+  const start = state.page * PAGE_SIZE;
+  const slice = indexes.slice(start, start + PAGE_SIZE);
   const tb = document.getElementById("tbody");
+  const keepId = state.numTarget && state.numTarget.closest ? (state.numTarget.closest("tr") && state.numTarget.dataset.key) : null;
+  const keepRowId = state.numTarget && state.numTarget.closest && state.numTarget.closest("tr") ? state.numTarget.closest("tr").dataset.id : null;
+  const keepKey = state.numTarget ? state.numTarget.dataset.key : null;
   tb.replaceChildren();
-  let shown = 0;
-  state.rows.forEach((row, i) => {
-    const hay = COLS.map(c => row[c.key] || "").join(" ").toLowerCase();
-    const hide = q && !hay.includes(q);
-    if (!hide) shown += 1;
+  slice.forEach((rowIndex) => {
+    const row = state.rows[rowIndex];
     const tr = document.createElement("tr");
     tr.dataset.id = row.id;
-    if (hide) tr.className = "hidden";
+    tr.dataset.index = String(rowIndex);
     const num = document.createElement("td");
     num.className = "num";
-    num.textContent = String(i + 1);
+    num.textContent = String(rowIndex + 1);
     tr.appendChild(num);
     COLS.forEach(c => {
       const td = document.createElement("td");
+      if (isNumKey(c.key)) td.className = "num-col";
+      if (c.key === "defect") td.className = "def-cell";
       const input = document.createElement("input");
       input.value = row[c.key] || "";
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
       if (c.key === "species") input.setAttribute("list", "speciesList");
       if (c.key === "defect") input.setAttribute("list", "defectList");
-      if (c.key === "h" || c.key === "s" || c.key === "dbh") input.setAttribute("inputmode", "decimal");
+      if (isNumKey(c.key)) bindNumInput(input);
       input.addEventListener("input", ev => {
         row[c.key] = ev.target.value;
         save();
         updateCountAndLists();
       });
+      input.addEventListener("focus", () => {
+        document.querySelectorAll("table.sheet tbody tr").forEach(r => r.classList.remove("active"));
+        tr.classList.add("active");
+      });
       td.appendChild(input);
+      if (c.key === "defect") {
+        const pick = document.createElement("button");
+        pick.type = "button";
+        pick.className = "pick";
+        pick.textContent = "選";
+        pick.title = "選擇缺陷";
+        pick.addEventListener("click", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          hideKeypad();
+          state.defectTarget = row.id;
+          document.getElementById("defectFilter").value = "";
+          renderDefectPicker();
+          document.getElementById("defectDlg").showModal();
+        });
+        td.appendChild(pick);
+      }
       tr.appendChild(td);
     });
     const act = document.createElement("td");
@@ -546,9 +592,10 @@ function render() {
     del.textContent = "刪";
     del.title = "刪除此列";
     del.addEventListener("click", () => {
-      if (isFilled(row) && !confirm("刪除第 " + (i + 1) + " 列？")) return;
-      state.rows = state.rows.filter(r => r.id !== row.id);
-      if (!state.rows.length) state.rows.push(emptyRowWithId());
+      if (isFilled(row) && !confirm("刪除第 " + (rowIndex + 1) + " 列？")) return;
+      hideKeypad();
+      state.rows.splice(rowIndex, 1);
+      padToPageMultiple();
       save();
       render();
     });
@@ -556,8 +603,15 @@ function render() {
     tr.appendChild(act);
     tb.appendChild(tr);
   });
-  document.getElementById("empty").style.display = state.rows.length ? "none" : "block";
+  // if this page has fewer than 10 because of search, leave as-is
   updateCountAndLists();
+  if (keepRowId && keepKey) {
+    const el = document.querySelector('tr[data-id="' + keepRowId + '"] input[data-key="' + keepKey + '"]');
+    if (el) {
+      state.numTarget = el;
+      el.focus({ preventScroll: true });
+    }
+  }
 }
 
 function updateCountAndLists() {
@@ -572,37 +626,110 @@ function updateCountAndLists() {
   });
 }
 
-function nextTreeNo(prev) {
-  const s = String(prev || "").trim();
-  if (!s) return "";
-  const m = s.match(/^(.*?)(\d+)(\s*)$/);
-  if (!m) return s;
-  return m[1] + String(Number(m[2]) + 1).padStart(m[2].length, "0") + m[3];
-}
-
-function lastFilled() {
-  for (let i = state.rows.length - 1; i >= 0; i--) {
-    if (isFilled(state.rows[i])) return state.rows[i];
+function goPage(delta) {
+  hideKeypad();
+  const pages = pageCount();
+  if (delta > 0 && state.page >= pages - 1) {
+    if (document.getElementById("q").value.trim()) return;
+    for (let i = 0; i < PAGE_SIZE; i++) state.rows.push(emptyRowWithId());
+    state.page += 1;
+    save();
+    render();
+    const first = document.querySelector("#tbody tr input[data-key='batch']");
+    if (first) first.focus();
+    return;
   }
-  return null;
-}
-
-function prefillQuick() {
-  const last = lastFilled();
-  if (!last) return;
-  if (!document.getElementById("qBatch").value) document.getElementById("qBatch").value = last.batch || "";
-  if (!document.getElementById("qSpecies").value) document.getElementById("qSpecies").value = last.species || "";
-  if (!document.getElementById("qTreeNo").value) document.getElementById("qTreeNo").value = nextTreeNo(last.treeNo);
-}
-
-function addRow(row, opts) {
-  const r = Object.assign(emptyRowWithId(), row);
-  const blanks = state.rows.length === 1 && !isFilled(state.rows[0]);
-  if (blanks) state.rows = [r];
-  else state.rows.push(r);
+  state.page = Math.max(0, Math.min(pages - 1, state.page + delta));
   save();
-  if (!opts || !opts.silent) render();
-  return r;
+  render();
+}
+
+/* ---------- numeric keypad ---------- */
+const NUMPAD_KEYS = ["1","2","3","4","5","6","7","8","9",".","0","⌫"];
+const NUM_LABELS = { h: "H（高度 m）", s: "S（冠幅 m）", dbh: "DBH（胸徑 mm）" };
+const NUM_ORDER = ["h","s","dbh"];
+
+function showKeypad(input) {
+  state.numTarget = input;
+  const key = input.dataset.key;
+  document.getElementById("numpadLabel").textContent = NUM_LABELS[key] || key;
+  document.body.classList.add("numpad-open");
+  setTimeout(() => {
+    input.scrollIntoView({ block: "center", inline: "nearest" });
+  }, 50);
+}
+function hideKeypad() {
+  document.body.classList.remove("numpad-open");
+  state.numTarget = null;
+}
+function numpadPress(key) {
+  const input = state.numTarget;
+  if (!input) return;
+  let v = String(input.value || "");
+  if (key === "⌫") v = v.slice(0, -1);
+  else if (key === ".") {
+    if (v.includes(".")) return;
+    v = v === "" ? "0." : v + ".";
+  } else {
+    v += key;
+  }
+  input.value = v;
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function numpadAdvance() {
+  const input = state.numTarget;
+  if (!input) return;
+  const tr = input.closest("tr");
+  const key = input.dataset.key;
+  const i = NUM_ORDER.indexOf(key);
+  if (i >= 0 && i < NUM_ORDER.length - 1) {
+    const next = tr.querySelector('input[data-key="' + NUM_ORDER[i + 1] + '"]');
+    if (next) { next.focus(); return; }
+  }
+  const nextRow = tr.nextElementSibling;
+  if (nextRow) {
+    const next = nextRow.querySelector('input[data-key="h"]');
+    if (next) { next.focus(); return; }
+  }
+  // last cell on this page: go next page and focus H
+  if (state.page < pageCount() - 1 || !document.getElementById("q").value.trim()) {
+    goPage(1);
+    const first = document.querySelector("#tbody tr input[data-key='h']");
+    if (first) first.focus();
+  } else {
+    hideKeypad();
+  }
+}
+
+function initNumpad() {
+  const grid = document.getElementById("numpadGrid");
+  NUMPAD_KEYS.forEach(k => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = k;
+    if (k === "⌫") b.className = "wide";
+    b.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      numpadPress(k);
+    });
+    grid.appendChild(b);
+  });
+  document.getElementById("numpadDone").addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    hideKeypad();
+  });
+  document.getElementById("numpadNext").addEventListener("pointerdown", ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    numpadAdvance();
+  });
+  document.addEventListener("pointerdown", ev => {
+    if (!document.body.classList.contains("numpad-open")) return;
+    if (ev.target.closest("#numpad")) return;
+    if (ev.target.matches && ev.target.matches("input") && isNumKey(ev.target.dataset.key)) return;
+    hideKeypad();
+  });
 }
 
 /* ---------- zip / xlsx ---------- */
@@ -881,7 +1008,7 @@ function exportHtmlBackup() {
   const payload = { job: state.job, rows: state.rows, savedAt: new Date().toISOString() };
   const html = "<!DOCTYPE html>\n" + document.documentElement.outerHTML.replace(
     /<script id="data-store" type="application\/json">[\s\S]*?<\/script>/,
-    '<script id="data-store" type="application/json">' + escapeScriptJson(payload) + "</script>"
+    '<script id="data-store" type="application/json">' + escapeScriptJson(payload) + "</scr"+"ipt>"
   );
   downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), exportFileName(".html"));
   toast("已下載含資料嘅 HTML 備份");
@@ -1056,18 +1183,18 @@ function applyImport(mode) {
   if (!rows.length) return;
   if (mode === "replace") state.rows = rows;
   else {
-    const onlyBlank = state.rows.length === 1 && !isFilled(state.rows[0]);
+    const onlyBlank = state.rows.every(r => !isFilled(r));
     state.rows = onlyBlank ? rows : state.rows.concat(rows);
   }
+  state.page = 0;
+  padToPageMultiple();
   save();
   render();
   toast("已匯入 " + rows.length + " 棵");
-  prefillQuick();
 }
 
-/* ---------- defects picker ---------- */
+
 function currentDefectField() {
-  if (state.defectTarget === "quick") return document.getElementById("qDefect");
   return document.querySelector('tr[data-id="' + state.defectTarget + '"] input[data-key="defect"]');
 }
 function parseDefects(s) {
@@ -1103,7 +1230,6 @@ function renderDefectPicker() {
     box.appendChild(b);
   });
 }
-
 function initDefectList() {
   const dl = document.getElementById("defectList");
   DEFECTS.forEach(d => {
@@ -1113,22 +1239,9 @@ function initDefectList() {
   });
 }
 
-/* ---------- events ---------- */
 document.getElementById("job").addEventListener("input", ev => { state.job = ev.target.value; save(); });
-document.getElementById("btnAdd").addEventListener("click", () => {
-  const last = lastFilled();
-  const r = emptyRowWithId();
-  if (last) {
-    r.batch = last.batch || "";
-    r.treeNo = nextTreeNo(last.treeNo);
-    r.species = last.species || "";
-  }
-  state.rows.push(r);
-  save();
-  render();
-  const el = document.querySelector('tr[data-id="' + r.id + '"] input[data-key="treeNo"]');
-  if (el) { el.focus(); el.scrollIntoView({ block: "nearest" }); }
-});
+document.getElementById("btnPrev").addEventListener("click", () => goPage(-1));
+document.getElementById("btnNext").addEventListener("click", () => goPage(1));
 document.getElementById("btnExport").addEventListener("click", () => { exportXlsx().catch(err => { console.error(err); toast("匯出失敗"); }); });
 document.getElementById("btnHtml").addEventListener("click", exportHtmlBackup);
 document.getElementById("btnImport").addEventListener("click", () => document.getElementById("file").click());
@@ -1139,45 +1252,18 @@ document.getElementById("file").addEventListener("change", ev => {
 });
 document.getElementById("btnClear").addEventListener("click", () => {
   if (!confirm("清除全部記錄？呢步唔能還原（已匯出嘅 Excel 唔受影響）。")) return;
-  state.rows = [emptyRowWithId()];
+  hideKeypad();
+  state.rows = [];
+  state.page = 0;
+  padToPageMultiple();
   save();
   render();
   toast("已清除");
 });
-document.getElementById("q").addEventListener("input", render);
+document.getElementById("q").addEventListener("input", () => { state.page = 0; render(); });
 document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
 document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
-document.getElementById("quick").addEventListener("submit", ev => {
-  ev.preventDefault();
-  const row = {
-    batch: document.getElementById("qBatch").value.trim(),
-    treeNo: document.getElementById("qTreeNo").value.trim(),
-    species: document.getElementById("qSpecies").value.trim(),
-    h: document.getElementById("qH").value.trim(),
-    s: document.getElementById("qS").value.trim(),
-    dbh: document.getElementById("qDbh").value.trim(),
-    defect: document.getElementById("qDefect").value.trim()
-  };
-  if (!isFilled(row)) { toast("請先填至少一個欄位"); return; }
-  addRow(row);
-  document.getElementById("qTreeNo").value = nextTreeNo(row.treeNo);
-  document.getElementById("qH").value = "";
-  document.getElementById("qS").value = "";
-  document.getElementById("qDbh").value = "";
-  document.getElementById("qDefect").value = "";
-  document.getElementById("qTreeNo").focus();
-  toast("已加入 " + (row.treeNo || "新列"));
-  const last = document.querySelector("#tbody tr:last-child");
-  if (last) last.scrollIntoView({ block: "nearest" });
-});
-document.getElementById("btnPickDefect").addEventListener("click", () => {
-  state.defectTarget = "quick";
-  document.getElementById("defectFilter").value = "";
-  renderDefectPicker();
-  document.getElementById("defectDlg").showModal();
-  document.getElementById("defectFilter").focus();
-});
 document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
 document.getElementById("defectDone").addEventListener("click", () => document.getElementById("defectDlg").close());
 document.getElementById("defectClear").addEventListener("click", () => {
@@ -1201,9 +1287,9 @@ document.addEventListener("drop", e => {
 });
 
 initDefectList();
+initNumpad();
 load();
 render();
-prefillQuick();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(function(){});
 }
