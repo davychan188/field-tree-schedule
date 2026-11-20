@@ -423,7 +423,6 @@
   <button type="button" id="btnExport">匯出 Excel</button>
   <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
   <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
-  <button type="button" class="danger" id="btnClear">清除全部</button>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／缺陷" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
@@ -493,7 +492,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "5";
+const APP_VER = "6";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -1580,17 +1579,6 @@ document.getElementById("file").addEventListener("change", ev => {
   const f = ev.target.files && ev.target.files[0];
   ev.target.value = "";
   if (f) handleFile(f);
-});
-document.getElementById("btnClear").addEventListener("click", () => {
-  if (!confirm("清除全部記錄？呢步唔能還原（已匯出嘅 Excel 唔受影響）。")) return;
-  hideKeypad();
-  hideSpeciesBar(false);
-  state.rows = [];
-  state.page = 0;
-  padToPageMultiple();
-  save();
-  render();
-  toast("已清除");
 });
 document.getElementById("q").addEventListener("input", () => { state.page = 0; render(); });
 document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
