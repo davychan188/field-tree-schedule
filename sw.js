@@ -1,4 +1,4 @@
-const CACHE = "field-tree-schedule-v11";
+const CACHE = "field-tree-schedule-v12";
 const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {

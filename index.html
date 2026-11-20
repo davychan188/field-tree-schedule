@@ -158,7 +158,7 @@
   table.sheet {
     border-collapse: collapse;
     width: 100%;
-    min-width: 980px;
+    min-width: 760px;
     table-layout: fixed;
     font-size: 15px;
   }
@@ -171,8 +171,8 @@
     background: #1b5e3b;
     color: #fff;
     font-weight: 600;
-    font-size: 13px;
-    padding: 7px 6px;
+    font-size: 12px;
+    padding: 6px 3px;
     text-align: center;
     position: sticky;
     top: 0;
@@ -180,13 +180,13 @@
     white-space: nowrap;
   }
   table.sheet th .u { display: block; font-weight: 400; font-size: 10px; opacity: .85; }
-  table.sheet col.c-num { width: 36px; }
-  table.sheet col.c-batch { width: 72px; }
-  table.sheet col.c-tree { width: 118px; }
+  table.sheet col.c-num { width: 28px; }
+  table.sheet col.c-batch { width: 48px; }
+  table.sheet col.c-tree { width: 86px; }
   table.sheet col.c-sp { width: auto; }
-  table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 72px; }
-  table.sheet col.c-def { width: 160px; }
-  table.sheet col.c-rec { width: 200px; }
+  table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 48px; }
+  table.sheet col.c-def { width: 108px; }
+  table.sheet col.c-rec { width: 120px; }
   table.sheet col.c-act { width: 44px; }
   table.sheet td.num {
     text-align: center;
@@ -200,8 +200,8 @@
     width: 100%;
     border: 0;
     background: transparent;
-    padding: 8px 6px;
-    font-size: 16px;
+    padding: 8px 3px;
+    font-size: 15px;
     font-family: inherit;
     min-height: 44px;
     -webkit-user-select: text;
@@ -443,7 +443,7 @@
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
 <div class="bulk-prefix" id="bulkPrefix">
-  <span class="lab">全部 Tree No. 前綴</span>
+  <span class="lab">新 Tree No. 前綴</span>
   <button type="button" data-prefix="T">T</button>
   <button type="button" data-prefix="AT">AT</button>
   <button type="button" data-prefix="TG">TG</button>
@@ -530,7 +530,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "11";
+const APP_VER = "12";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -829,18 +829,19 @@ function bindNumInput(input) {
         input.dispatchEvent(new Event("input", { bubbles: true }));
       }
     }
-    if (key === "treeNo" && !String(input.value || "").trim() && idx > 0) {
-      for (let i = idx - 1; i >= 0; i--) {
-        if (state.rows[i].treeNo) {
-          input.value = nextTreeNo(state.rows[i].treeNo);
-          input.dispatchEvent(new Event("input", { bubbles: true }));
-          break;
+    if (key === "treeNo") {
+      const wasEmpty = !String(input.value || "").trim();
+      if (wasEmpty && idx > 0) {
+        for (let i = idx - 1; i >= 0; i--) {
+          if (state.rows[i].treeNo) {
+            input.value = nextTreeNo(state.rows[i].treeNo);
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            break;
+          }
         }
       }
-    }
-    if (key === "treeNo" && state.treePrefix) {
-      const cur = parseTreeNo(input.value);
-      if (!cur.prefix) {
+      if (wasEmpty && state.treePrefix) {
+        const cur = parseTreeNo(input.value);
         cur.prefix = state.treePrefix;
         input.value = formatTreeNo(cur);
         input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -900,27 +901,9 @@ function syncBulkPrefixButtons() {
 }
 function applyBulkTreePrefix(prefix) {
   state.treePrefix = prefix;
-  let n = 0;
-  state.rows.forEach(row => {
-    const raw = String(row.treeNo || "").trim();
-    if (!raw && !isFilled(row)) return;
-    const cur = parseTreeNo(row.treeNo);
-    if (!raw && !cur.star) {
-      // leave completely empty unused rows alone
-      return;
-    }
-    if (cur.prefix === prefix) return;
-    cur.prefix = prefix;
-    const next = formatTreeNo(cur);
-    if (next !== row.treeNo) {
-      row.treeNo = next;
-      n += 1;
-    }
-  });
   save();
   syncBulkPrefixButtons();
-  render();
-  toast(n ? ("已將 " + n + " 個 Tree No. 改為 " + prefix) : ("新嘅 Tree No. 會用 " + prefix));
+  toast("之後新入嘅 Tree No. 會用 " + prefix + "，已輸入嘅唔會改");
 }
 function initBulkPrefix() {
   document.querySelectorAll("#bulkPrefix button").forEach(b => {
