@@ -2,7 +2,7 @@
 
 離線記錄場地樹木評估表（Batch、Tree No.、Species Name、H、S、DBH、Remarks、Recommendation），並匯出 Excel。資料只在你的瀏覽器處理，不會上載到伺服器。
 
-開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=16)
+開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=17)
 
 ## iPad mini + Apple Pencil 建議用法
 
@@ -10,7 +10,7 @@
 2. 點分享按鈕，選 **加入主畫面**。之後當一個 App 打開，第一次載入後，現場無網絡都可以繼續用。
 3. 在「設定 > Apple Pencil」開啟 **Scribble（隨手寫）**，品種欄就可以用 Pencil 直接手寫。
 4. 畫面以 Excel 列表顯示，每頁 20 項，可翻頁繼續填。
-5. 填完記得 **匯出 Excel**，或「下載 HTML 備份」。主畫面圖示嘅暫存較穩，但清 App／換機就會冇，備份最穩陣。改錯可以撳工具列嘅 **上一步**（最多 50 步），**重做** 可以再改返去。
+5. 填完記得 **匯出 Excel**，或「下載 HTML 備份」。主畫面圖示嘅暫存較穩，但清 App／換機就會冇，備份最穩陣。改錯可以撳工具列嘅 **上一步**（最多 50 步），**重做** 可以再改返去。**清除全部** 要先確認先會刪除資料，之後亦可用上一步復原。
 
 填表方式：
 

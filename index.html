@@ -453,6 +453,7 @@
   <button type="button" id="btnExport">匯出 Excel</button>
   <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
   <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
+  <button type="button" class="danger" id="btnClear">清除全部</button>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／備註／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
@@ -501,6 +502,16 @@
   <div class="numpad-grid" id="numpadGrid"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<dialog class="modal" id="clearDlg">
+  <div class="modal-body">
+    <h3>清除全部記錄？</h3>
+    <p id="clearMsg">確定要清除而家全部記錄？此操作會刪除表內所有已填資料。</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="clearCancel">取消</button>
+      <button type="button" class="danger" id="clearConfirm">確認清除</button>
+    </div>
+  </div>
+</dialog>
 <dialog class="modal" id="importDlg">
   <div class="modal-body">
     <h3>匯入資料</h3>
@@ -544,7 +555,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "16";
+const APP_VER = "17";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -660,7 +671,7 @@ function endUndoCoalesce() { undoCoalesce = null; }
 function closeTransientUi() {
   hideKeypad();
   hideSpeciesBar(false);
-  ["defectDlg", "recDlg", "importDlg"].forEach(id => {
+  ["defectDlg", "recDlg", "importDlg", "clearDlg"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.open) el.close();
   });
@@ -1829,6 +1840,30 @@ function initRecList() {
   });
 }
 
+function requestClearAll() {
+  hideKeypad();
+  hideSpeciesBar(true);
+  const n = filledCount();
+  if (!n) { toast("未有資料要清除"); return; }
+  document.getElementById("clearMsg").textContent = "將會清除而家全部 " + n + " 棵記錄。確定要清空？清除後可用「上一步」復原。";
+  document.getElementById("clearDlg").showModal();
+}
+function applyClearAll() {
+  document.getElementById("clearDlg").close();
+  if (!filledCount()) return;
+  pushUndo("clear");
+  endUndoCoalesce();
+  state.rows = [];
+  state.page = 0;
+  state.treePrefix = "";
+  document.getElementById("q").value = "";
+  padToPageMultiple();
+  save();
+  syncBulkPrefixButtons();
+  render();
+  toast("已清除全部記錄，可用「上一步」復原");
+}
+
 document.getElementById("job").addEventListener("input", ev => { pushUndo("job"); state.job = ev.target.value; save(); });
 document.getElementById("job").addEventListener("blur", endUndoCoalesce);
 document.getElementById("btnUndo").addEventListener("click", undo);
@@ -1837,6 +1872,9 @@ document.getElementById("btnPrev").addEventListener("click", () => goPage(-1));
 document.getElementById("btnNext").addEventListener("click", () => goPage(1));
 document.getElementById("btnExport").addEventListener("click", () => { exportXlsx().catch(err => { console.error(err); toast("匯出失敗"); }); });
 document.getElementById("btnHtml").addEventListener("click", exportHtmlBackup);
+document.getElementById("btnClear").addEventListener("click", requestClearAll);
+document.getElementById("clearCancel").addEventListener("click", () => document.getElementById("clearDlg").close());
+document.getElementById("clearConfirm").addEventListener("click", applyClearAll);
 document.getElementById("btnImport").addEventListener("click", () => document.getElementById("file").click());
 document.getElementById("file").addEventListener("change", ev => {
   const f = ev.target.files && ev.target.files[0];
