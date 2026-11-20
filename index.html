@@ -436,6 +436,8 @@
     <span id="pageLabel">第 1 / 1 頁</span>
     <button type="button" class="secondary" id="btnNext">下一頁</button>
   </div>
+  <button type="button" class="secondary" id="btnUndo" disabled>上一步</button>
+  <button type="button" class="secondary" id="btnRedo" disabled>重做</button>
   <button type="button" id="btnExport">匯出 Excel</button>
   <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
   <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
@@ -530,7 +532,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "14";
+const APP_VER = "15";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -618,6 +620,85 @@ function save() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(payload)); } catch (e) {}
 }
 
+const UNDO_LIMIT = 50;
+let undoStack = [];
+let redoStack = [];
+let undoCoalesce = null;
+let restoring = false;
+
+function snapshotData() {
+  return JSON.parse(JSON.stringify({ job: state.job, rows: state.rows, page: state.page, treePrefix: state.treePrefix }));
+}
+function snapshotEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+function applySnapshot(snap) {
+  state.job = snap.job || "";
+  state.rows = JSON.parse(JSON.stringify(snap.rows || []));
+  state.page = typeof snap.page === "number" ? snap.page : 0;
+  state.treePrefix = snap.treePrefix || "";
+}
+function syncUndoButtons() {
+  const u = document.getElementById("btnUndo");
+  const r = document.getElementById("btnRedo");
+  if (u) u.disabled = !undoStack.length;
+  if (r) r.disabled = !redoStack.length;
+}
+function endUndoCoalesce() { undoCoalesce = null; }
+function closeTransientUi() {
+  hideKeypad();
+  hideSpeciesBar(false);
+  ["defectDlg", "recDlg", "importDlg"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.open) el.close();
+  });
+}
+function pushUndo(key) {
+  if (restoring) return;
+  if (key && key === undoCoalesce && undoStack.length) return;
+  const snap = snapshotData();
+  if (undoStack.length && snapshotEqual(undoStack[undoStack.length - 1], snap)) {
+    undoCoalesce = key || null;
+    return;
+  }
+  undoStack.push(snap);
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  redoStack = [];
+  undoCoalesce = key || null;
+  syncUndoButtons();
+}
+function undo() {
+  if (!undoStack.length || restoring) return;
+  closeTransientUi();
+  endUndoCoalesce();
+  restoring = true;
+  redoStack.push(snapshotData());
+  applySnapshot(undoStack.pop());
+  padToPageMultiple();
+  save();
+  syncBulkPrefixButtons();
+  render();
+  syncUndoButtons();
+  restoring = false;
+  toast("已返回上一步");
+}
+function redo() {
+  if (!redoStack.length || restoring) return;
+  closeTransientUi();
+  endUndoCoalesce();
+  restoring = true;
+  undoStack.push(snapshotData());
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  applySnapshot(redoStack.pop());
+  padToPageMultiple();
+  save();
+  syncBulkPrefixButtons();
+  render();
+  syncUndoButtons();
+  restoring = false;
+  toast("已重做");
+}
+
 function toast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg;
@@ -675,6 +756,7 @@ function render() {
         input.addEventListener("click", () => openSpeciesBar(row.id, input));
       }
       input.addEventListener("input", ev => {
+        pushUndo(row.id + ":" + c.key);
         row[c.key] = ev.target.value;
         if (c.key === "species") updateZhHint(td, ev.target.value);
         save();
@@ -760,6 +842,8 @@ function goPage(delta) {
   const pages = pageCount();
   if (delta > 0 && state.page >= pages - 1) {
     if (document.getElementById("q").value.trim()) return;
+    pushUndo("page");
+    endUndoCoalesce();
     for (let i = 0; i < PAGE_SIZE; i++) state.rows.push(emptyRowWithId());
     state.page += 1;
     save();
@@ -896,8 +980,13 @@ function currentPageIndexes() {
   return indexes.slice(start, start + PAGE_SIZE);
 }
 function applyBulkTreePrefix(prefix) {
-  state.treePrefix = prefix;
   const pageIdx = currentPageIndexes();
+  const willFill = pageIdx.some(i => !String(state.rows[i].treeNo || "").trim());
+  if (willFill || state.treePrefix !== prefix) {
+    pushUndo("bulk");
+    endUndoCoalesce();
+  }
+  state.treePrefix = prefix;
   const { last, width } = lastTreeSerial();
   let n = last;
   let first = null, end = null, count = 0;
@@ -1633,6 +1722,8 @@ function applyImport(mode) {
   state.pendingImport = null;
   document.getElementById("importDlg").close();
   if (!rows.length) return;
+  pushUndo("import");
+  endUndoCoalesce();
   if (mode === "replace") state.rows = rows;
   else {
     const onlyBlank = state.rows.every(r => !isFilled(r));
@@ -1732,7 +1823,10 @@ function initRecList() {
   });
 }
 
-document.getElementById("job").addEventListener("input", ev => { state.job = ev.target.value; save(); });
+document.getElementById("job").addEventListener("input", ev => { pushUndo("job"); state.job = ev.target.value; save(); });
+document.getElementById("job").addEventListener("blur", endUndoCoalesce);
+document.getElementById("btnUndo").addEventListener("click", undo);
+document.getElementById("btnRedo").addEventListener("click", redo);
 document.getElementById("btnPrev").addEventListener("click", () => goPage(-1));
 document.getElementById("btnNext").addEventListener("click", () => goPage(1));
 document.getElementById("btnExport").addEventListener("click", () => { exportXlsx().catch(err => { console.error(err); toast("匯出失敗"); }); });
@@ -1748,14 +1842,14 @@ document.getElementById("importCancel").addEventListener("click", () => { state.
 document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
 document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
-document.getElementById("defectDone").addEventListener("click", () => document.getElementById("defectDlg").close());
+document.getElementById("defectDone").addEventListener("click", () => { document.getElementById("defectDlg").close(); endUndoCoalesce(); });
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
   if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
   renderDefectPicker();
 });
 document.getElementById("recFilter").addEventListener("input", renderRecPicker);
-document.getElementById("recDone").addEventListener("click", () => document.getElementById("recDlg").close());
+document.getElementById("recDone").addEventListener("click", () => { document.getElementById("recDlg").close(); endUndoCoalesce(); });
 document.getElementById("recClear").addEventListener("click", () => {
   const input = currentRecField();
   if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
@@ -1765,6 +1859,14 @@ document.addEventListener("keydown", ev => {
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
     ev.preventDefault();
     exportXlsx().catch(() => toast("匯出失敗"));
+  }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") {
+    ev.preventDefault();
+    if (ev.shiftKey) redo(); else undo();
+  }
+  if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "y") {
+    ev.preventDefault();
+    redo();
   }
 });
 ["dragenter","dragover"].forEach(ev => {
