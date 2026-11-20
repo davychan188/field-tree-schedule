@@ -143,7 +143,7 @@
   table.sheet {
     border-collapse: collapse;
     width: 100%;
-    min-width: 780px;
+    min-width: 980px;
     table-layout: fixed;
     font-size: 15px;
   }
@@ -170,7 +170,8 @@
   table.sheet col.c-tree { width: 118px; }
   table.sheet col.c-sp { width: auto; }
   table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 72px; }
-  table.sheet col.c-def { width: 200px; }
+  table.sheet col.c-def { width: 160px; }
+  table.sheet col.c-rec { width: 200px; }
   table.sheet col.c-act { width: 44px; }
   table.sheet td.num {
     text-align: center;
@@ -423,7 +424,7 @@
   <button type="button" id="btnExport">匯出 Excel</button>
   <button type="button" class="secondary" id="btnImport">匯入 Excel</button>
   <button type="button" class="secondary" id="btnHtml">下載 HTML 備份</button>
-  <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／缺陷" autocomplete="off"></div>
+  <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／缺陷／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
 <main>
@@ -431,7 +432,7 @@
     <table class="sheet" id="table">
       <colgroup>
         <col class="c-num"><col class="c-batch"><col class="c-tree"><col class="c-sp">
-        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def">
+        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def"><col class="c-rec">
       </colgroup>
       <thead>
         <tr>
@@ -443,6 +444,7 @@
           <th>S <span class="u">m</span></th>
           <th>DBH <span class="u">mm</span></th>
           <th>Defect</th>
+          <th>Recommendation</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -487,13 +489,27 @@
     </div>
   </div>
 </dialog>
+<dialog class="modal" id="recDlg">
+  <div class="modal-body">
+    <h3>選擇 Recommendation</h3>
+    <p>可同時選多項</p>
+    <div class="field"><input id="recFilter" type="search" placeholder="搜尋建議"></div>
+    <div class="chips" id="recChips"></div>
+    <div class="defect-list" id="recChoices"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="recClear">清空已選</button>
+      <button type="button" id="recDone">完成</button>
+    </div>
+  </div>
+</dialog>
 <script id="data-store" type="application/json">null</script>
 <datalist id="speciesList"></datalist>
 <datalist id="defectList"></datalist>
+<datalist id="recList"></datalist>
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "8";
+const APP_VER = "9";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -501,15 +517,17 @@ const COLS = [
   { key: "h", label: "H", unit: "m" },
   { key: "s", label: "S", unit: "m" },
   { key: "dbh", label: "DBH", unit: "mm" },
-  { key: "defect", label: "Defect" }
+  { key: "defect", label: "Defect" },
+  { key: "recommendation", label: "Recommendation" }
 ];
+const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
 const DEFECTS = ["Abnormal bark crack on branch","Abnormal bark crack on trunk","Abnormal leaf size","Asymmetric crown","Bee hive","Bending","Bird nest","Borer Frass","Borer holes","Branch topped","Broken branch","Broken branches","Bulge","Burls","Canker","Cavity on branch","Cavity on roots","Cavity on trunk","Chlorotic leaves","Climbers","Collapsed","Co-dominant branches","Co-dominant branches with included bark","Co-dominant trunks","Co-dominant trunks with included bark","Conflict with building","Conflict with traffic","Crack","Crack on branch","Crack on root","Crooks","Cross branches","Cross trunks","Dead branch","Dead branches","Dead frond","Dead fronds","Dead stub","Dead surface root","Dead tree","Dead trunk","Dead twigs","Decay on branch","Decay on roots","Decay on trunk","Dehydrated trunk","Dieback","Drooping branches","Epicormics","Epiphytic plant","Exposed dead wood on branch","Exposed dead wood on trunk","Exposed root","Fissures on branches","Fungal fruiting bodies on branch","Fungal fruiting bodies on root","Fungal fruiting bodies on trunk","Fungal fruiting bodies on trunk base","Fungal fruiting body on branch","Fungal fruiting body on root","Fungal fruiting body on trunk","Fungal fruiting body on trunk base","Fungi","Gall","Galls","Girdling roots","Hanger","Heavy lateral branch","Imbalanced crown","Included bark","Included bark with response growth","Invisible root flare","Leader broken","Leaning","Leaning due to phototropism","Leaning with self-correction","Leaning with staking","Leaning without root-plate movement","Lion tailing","Low live crown ratio","Main trunk broken","Mechanical injury","Minor dead branch","Minor dieback","Minor sap flow","Missing leader","Multiple trunks","Narrowing trunk","Old termite track","On slope","Overgrown","Over-extending branch","Parasitic plant","Penciling","Poor health","Poor taper","Previous root-plate movement","Pruning wound on branch","Pruning wound on trunk","Reduced crown","Removed","Restricted root growth","Root plate movement","Sap flow","Seasonal defoliation","Severely sparse foliage","Sign of borer","Sign of pest","Sign of pest infestation","Sign of Phauda flammans infestation","Slightly leaning","Small crown size","Sparse foliage","Spiral grain","Split","Split on branch","Split on root","Stump","Strangled by ficus seedling","Sunscald","Suspected BRRD","Suspected hollow by sounding test","Swelling","Tearing wound","Termite mud tubes","Termite track","Termite track live termite","Topped","Tree located at drainage channel embankment","Tree located near hoarding","Trunk conflict with railing","Uprooted","V-shaped crotch with included bark","Wilted apical bud","Wilted crown","Wilting","Wilting fronds","Within construction site","Wound on branch","Wound on roots","Wound on trunk","Wound on trunk union","Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
-const state = { job: "", rows: [], page: 0, pendingImport: null, defectTarget: null, speciesTarget: null, numTarget: null };
+const state = { job: "", rows: [], page: 0, pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null };
 
 function emptyRow() {
-  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", defect: "" };
+  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", defect: "", recommendation: "" };
 }
 function isFilled(row) {
   return COLS.some(c => String(row[c.key] || "").trim() !== "");
@@ -612,13 +630,14 @@ function render() {
     COLS.forEach(c => {
       const td = document.createElement("td");
       if (isNumKey(c.key)) td.className = "num-col";
-      if (c.key === "defect") td.className = "def-cell";
+      if (c.key === "defect" || c.key === "recommendation") td.className = "def-cell";
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement("input");
       input.value = row[c.key] || "";
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
       if (c.key === "defect") input.setAttribute("list", "defectList");
+      if (c.key === "recommendation") input.setAttribute("list", "recList");
       if (isNumKey(c.key)) bindNumInput(input);
       if (c.key === "species") {
         input.setAttribute("readonly", "readonly");
@@ -664,10 +683,29 @@ function render() {
           ev.preventDefault();
           ev.stopPropagation();
           hideKeypad();
+          hideSpeciesBar(true);
           state.defectTarget = row.id;
           document.getElementById("defectFilter").value = "";
           renderDefectPicker();
           document.getElementById("defectDlg").showModal();
+        });
+        td.appendChild(pick);
+      }
+      if (c.key === "recommendation") {
+        const pick = document.createElement("button");
+        pick.type = "button";
+        pick.className = "pick";
+        pick.textContent = "選";
+        pick.title = "選擇建議";
+        pick.addEventListener("click", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          hideKeypad();
+          hideSpeciesBar(true);
+          state.recTarget = row.id;
+          document.getElementById("recFilter").value = "";
+          renderRecPicker();
+          document.getElementById("recDlg").showModal();
         });
         td.appendChild(pick);
       }
@@ -1226,7 +1264,7 @@ function buildSheetXml(rows) {
   out.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">');
   out.push('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
   const lastRow = Math.max(2 + rows.length, 2);
-  out.push('<dimension ref="A1:G' + lastRow + '"/>');
+  out.push('<dimension ref="A1:H' + lastRow + '"/>');
   out.push('<sheetViews><sheetView workbookViewId="0"/></sheetViews>');
   out.push('<sheetFormatPr defaultRowHeight="16"/>');
   out.push('<cols>');
@@ -1235,6 +1273,7 @@ function buildSheetXml(rows) {
   out.push('<col min="3" max="3" width="18.625" customWidth="1"/>');
   out.push('<col min="4" max="6" width="8" customWidth="1"/>');
   out.push('<col min="7" max="7" width="19.375" customWidth="1"/>');
+  out.push('<col min="8" max="8" width="28" customWidth="1"/>');
   out.push('</cols><sheetData>');
   out.push('<row r="1"><c r="A1" t="inlineStr" s="1"><is><t>Tree Assessment Schedule</t></is></c></row>');
   let h = '<row r="2">';
@@ -1429,7 +1468,8 @@ function mapImportedRows(table) {
     h: ["h", "height", "height (m)", "height(m)"],
     s: ["s", "spread", "crown spread", "crown spread (m)", "crown spread(m)"],
     dbh: ["dbh", "dbh (mm)", "dbh(mm)"],
-    defect: ["defect", "defects"]
+    defect: ["defect", "defects"],
+    recommendation: ["recommendation", "recommendations", "rec"]
   };
   for (let i = 0; i < Math.min(table.length, 15); i++) {
     const labels = (table[i] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
@@ -1584,6 +1624,47 @@ function initDefectList() {
     dl.appendChild(o);
   });
 }
+function currentRecField() {
+  return document.querySelector('tr[data-id="' + state.recTarget + '"] input[data-key="recommendation"]');
+}
+function renderRecPicker() {
+  const input = currentRecField();
+  const selected = new Set(parseDefects(input ? input.value : ""));
+  const q = document.getElementById("recFilter").value.trim().toLowerCase();
+  const chips = document.getElementById("recChips");
+  chips.replaceChildren();
+  selected.forEach(d => {
+    const sp = document.createElement("span");
+    sp.className = "chip";
+    sp.textContent = d;
+    chips.appendChild(sp);
+  });
+  const box = document.getElementById("recChoices");
+  box.replaceChildren();
+  RECOMMENDATIONS.filter(d => !q || d.toLowerCase().includes(q)).forEach(d => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = d;
+    if (selected.has(d)) b.className = "on";
+    b.addEventListener("click", () => {
+      if (selected.has(d)) selected.delete(d); else selected.add(d);
+      if (input) {
+        input.value = [...selected].join(", ");
+        input.dispatchEvent(new Event("input"));
+      }
+      renderRecPicker();
+    });
+    box.appendChild(b);
+  });
+}
+function initRecList() {
+  const dl = document.getElementById("recList");
+  RECOMMENDATIONS.forEach(d => {
+    const o = document.createElement("option");
+    o.value = d;
+    dl.appendChild(o);
+  });
+}
 
 document.getElementById("job").addEventListener("input", ev => { state.job = ev.target.value; save(); });
 document.getElementById("btnPrev").addEventListener("click", () => goPage(-1));
@@ -1607,6 +1688,13 @@ document.getElementById("defectClear").addEventListener("click", () => {
   if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
   renderDefectPicker();
 });
+document.getElementById("recFilter").addEventListener("input", renderRecPicker);
+document.getElementById("recDone").addEventListener("click", () => document.getElementById("recDlg").close());
+document.getElementById("recClear").addEventListener("click", () => {
+  const input = currentRecField();
+  if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
+  renderRecPicker();
+});
 document.addEventListener("keydown", ev => {
   if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "s") {
     ev.preventDefault();
@@ -1623,6 +1711,7 @@ document.addEventListener("drop", e => {
 });
 
 initDefectList();
+initRecList();
 initNumpad();
 initSpeciesBar();
 load();
