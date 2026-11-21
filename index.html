@@ -555,7 +555,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "18";
+const APP_VER = "19";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -893,13 +893,40 @@ function normSearch(s) {
     .replace(/['’.]/g, "")
     .replace(/\s+/g, "");
 }
+const GENUS_ALIASES = {
+  magnolia: ["michelia", "yulania"],
+  michelia: ["magnolia"],
+  yulania: ["magnolia"],
+  corymbia: ["eucalyptus"],
+  eucalyptus: ["corymbia"]
+};
+function speciesTokens(text) {
+  return String(text || "")
+    .replace(/&times;|&#215;|&#x00d7;|&#xd7;/gi, " x ")
+    .replace(/[×]/g, " x ")
+    .replace(/['’"][^'’"]*['’"]/g, " ")
+    .replace(/\b(subsp|ssp|var|cv|f|forma|species)\b\.?/ig, " ")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter(w => w && w !== "x" && w !== "unidentified");
+}
 function findSpecies(text) {
   const n = normSearch(text);
   if (!n) return null;
-  return SPECIES.find(sp => normSearch(sp.sci) === n) ||
+  const exact = SPECIES.find(sp => normSearch(sp.sci) === n) ||
     SPECIES.find(sp => (sp.zh || []).some(z => normSearch(z) === n)) ||
     SPECIES.find(sp => (sp.aliases || []).some(a => normSearch(a) === n)) ||
     null;
+  if (exact) return exact;
+  const tok = speciesTokens(text);
+  if (tok.length < 2) return null;
+  const genera = [tok[0], ...(GENUS_ALIASES[tok[0]] || [])];
+  const hits = SPECIES.filter(sp => {
+    const st = speciesTokens(sp.sci);
+    return st.length >= 2 && genera.includes(st[0]) && st[1] === tok[1];
+  });
+  return hits.length ? hits[0] : null;
 }
 function zhForSci(sci) {
   const sp = findSpecies(sci);
@@ -950,9 +977,13 @@ function bindNumInput(input) {
 }
 
 function speciesDisplay(val) {
-  const sp = findSpecies(val);
+  const raw = String(val || "").trim();
+  if (!raw) return "";
+  const sp = findSpecies(raw);
   if (sp && sp.zh && sp.zh[0]) return sp.zh[0];
-  return String(val || "");
+  if (/unidentified/i.test(raw) || /未能識別|未識別|不明品種/.test(raw)) return "未能識別";
+  if (/^[A-Za-z×xX\s.'’\-0-9&;#]+$/.test(raw) && /[A-Za-z]{3,}/.test(raw)) return "未配對";
+  return raw;
 }
 
 const NUM_LABELS = {
