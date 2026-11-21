@@ -555,7 +555,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 20;
-const APP_VER = "20";
+const APP_VER = "21";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -626,13 +626,27 @@ function load() {
   }
   if (data && Array.isArray(data.rows)) {
     state.job = data.job || "";
+    let cleaned = false;
     state.rows = data.rows.map(r => {
       const row = Object.assign(emptyRow(), r, { id: r.id || uid() });
       if (!String(row.remarks || "").trim() && r.defect) row.remarks = r.defect;
+      COLS.forEach(c => {
+        const cur = row[c.key];
+        if (typeof cur === "string" && cur.includes("&")) {
+          const next = decodeEntities(cur);
+          if (next !== cur) { row[c.key] = next; cleaned = true; }
+        }
+      });
+      if (row.species) {
+        const resolved = resolveSpeciesValue(row.species);
+        if (resolved !== row.species) { row.species = resolved; cleaned = true; }
+      }
       return row;
     });
+    if (cleaned) try { /* persist after decode */ } catch (e) {}
     if (typeof data.page === "number") state.page = data.page;
     if (data.treePrefix === "T" || data.treePrefix === "AT" || data.treePrefix === "TG") state.treePrefix = data.treePrefix;
+    if (cleaned) save();
   }
   padToPageMultiple();
   if (state.page > pageCount() - 1) state.page = 0;
@@ -912,7 +926,7 @@ function speciesTokens(text) {
     .filter(w => w && w !== "x" && w !== "unidentified");
 }
 function findSpecies(text) {
-  const n = normSearch(text);
+  const n = normSearch(decodeEntities(text));
   if (!n) return null;
   const exact = SPECIES.find(sp => normSearch(sp.sci) === n) ||
     SPECIES.find(sp => (sp.zh || []).some(z => normSearch(z) === n)) ||
@@ -977,7 +991,7 @@ function bindNumInput(input) {
 }
 
 function speciesDisplay(val) {
-  const raw = String(val || "").trim();
+  const raw = decodeEntities(String(val || "")).trim();
   if (!raw) return "";
   const sp = findSpecies(raw);
   if (sp && sp.zh && sp.zh[0]) return sp.zh[0];
@@ -1630,8 +1644,23 @@ function parseSharedStrings(xml) {
   }
   return out;
 }
+function decodeEntities(s) {
+  let t = String(s == null ? "" : s);
+  if (!t.includes("&")) return t;
+  t = t.replace(/&#x([0-9a-fA-F]+);/g, (_, h) => {
+    const n = parseInt(h, 16);
+    return Number.isFinite(n) ? String.fromCodePoint(n) : _;
+  }).replace(/&#(\d+);/g, (_, d) => {
+    const n = Number(d);
+    return Number.isFinite(n) ? String.fromCodePoint(n) : _;
+  });
+  return t.replace(/&nbsp;/gi, " ").replace(/&times;/gi, "×")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
+}
 function decodeXml(s) {
-  return String(s).replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  return decodeEntities(s);
 }
 function parseSheetRows(sheetXml, sst) {
   const rows = [];
@@ -1701,7 +1730,7 @@ function mapImportedRows(table) {
     const rec = emptyRowWithId();
     COLS.forEach(c => {
       const j = idx[c.key];
-      rec[c.key] = j >= 0 ? String(table[i][j] == null ? "" : table[i][j]).trim() : "";
+      rec[c.key] = j >= 0 ? decodeEntities(String(table[i][j] == null ? "" : table[i][j])).trim() : "";
     });
     if (rec.species) rec.species = resolveSpeciesValue(rec.species);
     if (isFilled(rec)) out.push(rec);
