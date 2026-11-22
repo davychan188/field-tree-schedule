@@ -878,7 +878,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "47";
+const APP_VER = "48";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1443,6 +1443,7 @@ function render() {
         pick.addEventListener("click", ev => {
           ev.preventDefault();
           ev.stopPropagation();
+          if (state.conditionFocusLock) return;
           openConditionDlg(row, input);
         });
         td.appendChild(pick);
@@ -1609,6 +1610,29 @@ function formatCondition(val) {
 function currentConditionField() {
   return document.querySelector('tr[data-id="' + state.conditionTarget + '"] input[data-key="condition"]');
 }
+let conditionLockTimer = null;
+function armConditionFocusLock(ms) {
+  state.conditionFocusLock = true;
+  clearTimeout(conditionLockTimer);
+  conditionLockTimer = setTimeout(() => { state.conditionFocusLock = false; }, ms || 1200);
+}
+function suppressConditionReopen(ev) {
+  if (!state.conditionFocusLock) return;
+  const dlg = document.getElementById("conditionDlg");
+  if (dlg && dlg.open) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  const t = ev.target;
+  if (t && typeof t.blur === "function") t.blur();
+}
+["pointerdown", "touchstart", "click", "focusin"].forEach(type => {
+  document.addEventListener(type, suppressConditionReopen, true);
+});
+function closeConditionDlg() {
+  const dlg = document.getElementById("conditionDlg");
+  armConditionFocusLock(1200);
+  if (dlg && dlg.open) dlg.close();
+}
 function openConditionDlg(row, input) {
   const dlg = document.getElementById("conditionDlg");
   if (!row || !dlg || state.conditionFocusLock || dlg.open) return;
@@ -1618,7 +1642,9 @@ function openConditionDlg(row, input) {
   beginEdit(row, "condition");
   state.conditionTarget = row.id;
   renderConditionPad();
+  dlg.setAttribute("tabindex", "-1");
   dlg.showModal();
+  try { dlg.focus(); } catch (e) {}
 }
 function applyConditionValue(obj) {
   const val = formatCondition(obj);
@@ -1645,10 +1671,8 @@ function renderConditionPad() {
   CONDITION_ASPECTS.forEach(aspect => {
     const group = document.createElement("div");
     group.className = "condition-group";
-    const title = document.createElement("button");
-    title.type = "button";
+    const title = document.createElement("div");
     title.className = "aspect";
-    title.tabIndex = -1;
     title.textContent = aspect.label;
     group.appendChild(title);
     const opts = document.createElement("div");
@@ -2979,19 +3003,27 @@ document.getElementById("q").addEventListener("input", () => {
 document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
 document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
+document.getElementById("conditionDone").addEventListener("pointerdown", ev => {
+  ev.stopPropagation();
+  armConditionFocusLock(1200);
+});
 document.getElementById("conditionDone").addEventListener("click", ev => {
   ev.preventDefault();
-  const dlg = document.getElementById("conditionDlg");
-  if (dlg.open) dlg.close();
+  ev.stopPropagation();
+  closeConditionDlg();
   endUndoCoalesce();
 });
+document.getElementById("conditionDlg").addEventListener("cancel", () => {
+  armConditionFocusLock(1200);
+});
 document.getElementById("conditionDlg").addEventListener("close", () => {
-  state.conditionFocusLock = true;
+  armConditionFocusLock(1200);
   const field = currentConditionField();
   commitEditStash();
   state.conditionTarget = null;
   if (field) field.blur();
-  setTimeout(() => { state.conditionFocusLock = false; }, 400);
+  const ae = document.activeElement;
+  if (ae && typeof ae.blur === "function" && ae !== document.body) ae.blur();
 });
 document.getElementById("conditionClear").addEventListener("click", () => { clearConditionPad(); });
 document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
