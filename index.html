@@ -865,7 +865,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "42";
+const APP_VER = "43";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -883,15 +883,15 @@ const REMARK_LOCS = [
   { key: "crown", label: "Crown", phrase: "crown", skipTypes: true },
   { key: "branch", label: "Branch", phrase: "branch" },
   { key: "trunk", label: "Trunk", phrase: "trunk" },
-  { key: "trunkBase", label: "Trunk base", phrase: "trunk base", hide: ["B", "Dead"] }
+  { key: "trunkBase", label: "Trunk base", phrase: "trunk base", hide: ["Broken", "Dead"] }
 ];
 const REMARK_TYPES = [
-  { abbr: "W", nameOf: "Wound on " },
-  { abbr: "C", nameOf: "Cavity on " },
+  { abbr: "Wound", nameOf: "Wound on " },
+  { abbr: "Cavity", nameOf: "Cavity on " },
   { abbr: "EDW", nameOf: "Exposed dead wood on " },
   { abbr: "Dead", nameOf: "Dead " },
   { abbr: "ABC", nameOf: "Abnormal bark crack on " },
-  { abbr: "B", nameOf: "Broken " }
+  { abbr: "Broken", nameOf: "Broken " }
 ];
 const REMARK_LOC_EXTRAS = {
   crown: [
@@ -903,9 +903,10 @@ const REMARK_LOC_EXTRAS = {
     { abbr: "PEST", name: "Sign of pest" }
   ],
   trunk: [
-    { abbr: "L", name: "Leaning" },
+    { abbr: "Leaning", name: "Leaning" },
     { abbr: "Bending", name: "Bending" },
-    { abbr: "COT", name: "Co-dominant trunks" }
+    { abbr: "COT", name: "Co-dominant trunks" },
+    { abbr: "IB", name: "Included bark" }
   ],
   trunkBase: [
     { abbr: "RPM", name: "Root plate movement" },
