@@ -829,7 +829,7 @@
 <dialog class="modal defect-modal" id="defectDlg">
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
-    <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead、ASY、PEST、EDW 可直接選。</p>
+    <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead 代表 Dead tree。</p>
     <div class="defect-mods" id="defectMods" role="group" aria-label="程度">
       <button type="button" data-mod="Severely">Severely</button>
       <button type="button" data-mod="Large">Large</button>
@@ -863,7 +863,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "40";
+const APP_VER = "41";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -875,10 +875,7 @@ const COLS = [
   { key: "recommendation", label: "Recommendation" }
 ];
 const REMARK_TOP = [
-  { abbr: "Dead", name: "Dead tree" },
-  { abbr: "ASY", name: "Asymmetric crown" },
-  { abbr: "PEST", name: "Sign of pest" },
-  { abbr: "EDW", name: "Exposed dead wood" }
+  { abbr: "Dead", name: "Dead tree" }
 ];
 const REMARK_LOCS = [
   { key: "crown", label: "Crown", phrase: "crown", skipTypes: true },
@@ -898,15 +895,19 @@ const REMARK_LOC_EXTRAS = {
   crown: [
     { abbr: "Top", name: "Topped" },
     { abbr: "SF", name: "Sparse foliage" },
-    { abbr: "DB", name: "Dead branch" },
     { abbr: "Dieback", name: "Dieback" },
     { abbr: "ASY", name: "Asymmetric crown" },
-    { abbr: "R", name: "Reduced crown" }
+    { abbr: "Reduced", name: "Reduced crown" },
+    { abbr: "PEST", name: "Sign of pest" }
   ],
   trunk: [
     { abbr: "L", name: "Leaning" },
     { abbr: "BN", name: "Bending" },
     { abbr: "COT", name: "Co-dominant trunks" }
+  ],
+  trunkBase: [
+    { abbr: "RPM", name: "Root plate movement" },
+    { abbr: "Uprooted", name: "Uprooted" }
   ]
 };
 function remarkTypeName(type, phrase) {
