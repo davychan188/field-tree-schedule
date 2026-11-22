@@ -245,7 +245,8 @@
   table.sheet tbody tr.removed.active,
   table.sheet tbody tr.done.removed.active { background: #dadada; }
   table.sheet tbody tr.removed td,
-  table.sheet tbody tr.removed td input { color: #5c5c5c; }
+  table.sheet tbody tr.removed td input,
+  table.sheet tbody tr.removed td textarea { color: #5c5c5c; }
   table.sheet tbody tr.removed td.num { background: #dcdcdc; color: #5c5c5c; }
   table.sheet tbody tr.removed td.num.done { background: #8a8a8a; color: #fff; }
   table.sheet td input:focus {
@@ -302,6 +303,26 @@
   .modal-body { padding: 18px 18px 16px; }
   .modal-body h3 { margin: 0 0 8px; font-size: 17px; }
   .modal-body p { margin: 0 0 14px; color: var(--muted); }
+  table.sheet td.def-cell textarea {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 8px 32px 8px 4px;
+    font-size: 14px;
+    font-family: inherit;
+    min-height: 48px;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.35;
+    box-sizing: border-box;
+  }
+  table.sheet td.def-cell textarea:focus {
+    outline: 2px solid var(--green);
+    outline-offset: -2px;
+    background: #fffef4;
+  }
   .defect-list {
     max-height: 50vh;
     overflow: auto;
@@ -309,6 +330,7 @@
     border-radius: 8px;
     margin: 8px 0 12px;
   }
+  .defect-list:empty { display: none; margin: 0; border: 0; }
   .defect-list button {
     display: block;
     width: 100%;
@@ -323,14 +345,27 @@
   }
   .defect-list button:last-child { border-bottom: 0; }
   .defect-list button.on { background: var(--green-soft); font-weight: 600; }
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; margin: 0 0 8px; }
+  .chips:empty { display: none; margin: 0; }
   .chip {
     background: var(--green-soft);
     color: var(--green-dark);
+    border: 1px solid var(--green);
     border-radius: 999px;
-    padding: 4px 10px;
+    padding: 6px 10px;
     font-size: 13px;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
   }
+  button.chip {
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-height: 32px;
+  }
+  button.chip:hover, button.chip:focus { background: #cfe4d5; }
   dialog.modal.rec-modal { width: min(640px, 96vw); }
   .rec-grid {
     display: grid;
@@ -538,7 +573,7 @@
 <body>
 <header class="app">
   <h1>Tree Assessment Schedule</h1>
-  <p class="sub">離線記錄 · 每頁 15 項 · Batch／Tree No.／尺寸用九宮格 · 品種可打字、手寫或搜尋 TMO 清單</p>
+  <p class="sub">離線記錄 · 每頁 10 項 · Batch／Tree No.／尺寸用九宮格 · 品種可打字、手寫或搜尋 TMO 清單</p>
   <div class="meta">
     <label class="job">工程／檔名 <input id="job" type="text" placeholder="可選，用於匯出檔名" autocomplete="off"></label>
     <div class="count" id="count">已記錄 0 棵</div>
@@ -678,8 +713,8 @@
 <datalist id="recList"></datalist>
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
-const PAGE_SIZE = 15;
-const APP_VER = "32";
+const PAGE_SIZE = 10;
+const APP_VER = "33";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -996,11 +1031,14 @@ function render() {
       if (isNumKey(c.key)) td.className = "num-col";
       if (c.key === "remarks" || c.key === "recommendation") td.className = "def-cell";
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
-      const input = document.createElement("input");
+      const input = document.createElement(c.key === "remarks" ? "textarea" : "input");
       input.value = c.key === "species" ? speciesDisplay(row.species) : (row[c.key] || "");
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
-      if (c.key === "remarks") input.setAttribute("list", "defectList");
+      if (c.key === "remarks") {
+        input.rows = 1;
+        input.setAttribute("wrap", "soft");
+      }
       if (c.key === "recommendation") input.setAttribute("list", "recList");
       if (isNumKey(c.key)) bindNumInput(input);
       if (c.key === "species") {
@@ -1022,6 +1060,7 @@ function render() {
         } else {
           row[c.key] = ev.target.value;
         }
+        if (c.key === "remarks") autosizeRemarks(ev.target);
         save();
         updateCountAndLists();
       });
@@ -1083,6 +1122,7 @@ function render() {
     });
     tb.appendChild(tr);
   });
+  tb.querySelectorAll('textarea[data-key="remarks"]').forEach(autosizeRemarks);
   // if this page has fewer rows because of search, leave as-is
   updateCountAndLists();
   syncMarkDoneButton();
@@ -2151,8 +2191,13 @@ function applyImport(mode) {
 }
 
 
+function autosizeRemarks(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.max(48, el.scrollHeight) + "px";
+}
 function currentDefectField() {
-  return document.querySelector('tr[data-id="' + state.defectTarget + '"] input[data-key="remarks"]');
+  return document.querySelector('tr[data-id="' + state.defectTarget + '"] [data-key="remarks"]');
 }
 function parseDefects(s) {
   return String(s || "").split(/[,;，；]+/).map(x => x.trim()).filter(Boolean);
@@ -2161,6 +2206,7 @@ function applyRemarkSelection(input, selected) {
   if (input) {
     input.value = [...selected].join(", ");
     input.dispatchEvent(new Event("input"));
+    autosizeRemarks(input);
   }
   renderDefectPicker();
 }
@@ -2171,9 +2217,15 @@ function renderDefectPicker() {
   const chips = document.getElementById("defectChips");
   chips.replaceChildren();
   selected.forEach(d => {
-    const sp = document.createElement("span");
+    const sp = document.createElement("button");
+    sp.type = "button";
     sp.className = "chip";
     sp.textContent = d;
+    sp.title = "取消選擇";
+    sp.addEventListener("click", () => {
+      selected.delete(d);
+      applyRemarkSelection(input, selected);
+    });
     chips.appendChild(sp);
   });
   const shorts = document.getElementById("defectShortcuts");
@@ -2202,17 +2254,28 @@ function renderDefectPicker() {
   });
   const box = document.getElementById("defectChoices");
   box.replaceChildren();
-  DEFECTS.filter(d => !q || d.toLowerCase().includes(q)).forEach(d => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = d;
-    if (selected.has(d)) b.className = "on";
-    b.addEventListener("click", () => {
-      if (selected.has(d)) selected.delete(d); else selected.add(d);
-      applyRemarkSelection(input, selected);
-    });
-    box.appendChild(b);
-  });
+  if (q) {
+    const hits = DEFECTS.filter(d => d.toLowerCase().includes(q));
+    if (!hits.length) {
+      const empty = document.createElement("button");
+      empty.type = "button";
+      empty.disabled = true;
+      empty.textContent = "未搵到相關備註";
+      box.appendChild(empty);
+    } else {
+      hits.forEach(d => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = d;
+        if (selected.has(d)) b.className = "on";
+        b.addEventListener("click", () => {
+          if (selected.has(d)) selected.delete(d); else selected.add(d);
+          applyRemarkSelection(input, selected);
+        });
+        box.appendChild(b);
+      });
+    }
+  }
 }
 function initDefectList() {
   const dl = document.getElementById("defectList");
