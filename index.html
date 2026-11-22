@@ -161,7 +161,6 @@
   }
   main { padding: 8px 10px calc(16px + var(--safe-bottom)); }
   body.numpad-open main { padding-bottom: 320px; }
-  body.numpad-open.mode-condition main { padding-bottom: calc(16px + var(--safe-bottom)); }
   body.species-open main { padding-top: 8px; }
   .sheet-wrap {
     overflow: auto;
@@ -300,7 +299,6 @@
     max-width: 90vw;
   }
   body.numpad-open .toast { bottom: 300px; }
-  body.numpad-open.mode-condition .toast,
   body.species-open .toast { bottom: 24px; }
   .toast.show { opacity: 1; }
   dialog.modal {
@@ -508,25 +506,6 @@
     box-shadow: 0 -6px 20px rgba(0,0,0,.16);
   }
   body.numpad-open #numpad { display: block; }
-  body.numpad-open.mode-condition #numpad {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    inset: 0;
-    bottom: auto;
-    background: rgba(0,0,0,.4);
-    border-top: 0;
-    box-shadow: none;
-    padding: calc(12px + var(--safe-top)) 16px calc(12px + var(--safe-bottom));
-  }
-  body.mode-condition .numpad-panel {
-    width: min(560px, 94vw);
-    background: #cfd6d1;
-    border: 1px solid #9aa59e;
-    border-radius: 14px;
-    padding: 14px;
-    box-shadow: 0 12px 40px rgba(0,0,0,.28);
-  }
   .numpad-bar {
     display: flex;
     align-items: center;
@@ -553,18 +532,13 @@
     border-radius: 8px;
   }
   .numpad-grid button.wide { font-size: 20px; }
-  body.mode-condition .numpad-grid,
-  body.mode-condition .prefixes,
-  body.mode-condition .h-options { display: none; }
-  body.mode-condition .numpad-bar { max-width: 560px; }
+  dialog.modal.condition-modal { width: min(560px, 96vw); }
   .condition-pad {
-    display: none;
+    display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 8px;
-    max-width: 560px;
-    margin: 0 auto;
+    margin: 0 0 14px;
   }
-  body.mode-condition .condition-pad { display: grid; }
   .condition-group {
     background: #fff;
     border: 1px solid #b0b8b3;
@@ -604,7 +578,7 @@
     color: #fff;
     border-color: var(--green);
   }
-  table.sheet td.num-col input[data-key="condition"] {
+  table.sheet td.def-cell input[data-key="condition"] {
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.01em;
@@ -827,7 +801,6 @@
     <button type="button" id="btnOrange">Orange</button>
   </div>
   <div class="numpad-grid" id="numpadGrid"></div>
-  <div class="condition-pad" id="conditionPad"></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -849,6 +822,17 @@
       <button type="button" class="secondary" id="importCancel">取消</button>
       <button type="button" class="secondary" id="importAppend">加到後面</button>
       <button type="button" id="importReplace">取代現有</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="modal condition-modal" id="conditionDlg">
+  <div class="modal-body">
+    <h3>選擇 Condition</h3>
+    <p>分別揀 Health、Structure、Form。每項可選 N（Normal）、F（Fair）、P（Poor）、VP（Very poor）。再撳已選可取消。</p>
+    <div class="condition-pad" id="conditionPad"></div>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="conditionClear">清空已選</button>
+      <button type="button" id="conditionDone">完成</button>
     </div>
   </div>
 </dialog>
@@ -888,7 +872,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "44";
+const APP_VER = "45";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -949,7 +933,7 @@ const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Cr
 const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
-const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "" };
+const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "" };
 
 function emptyRow() {
   return { treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", recommendation: "", done: false, removed: false, orange: false };
@@ -1122,7 +1106,7 @@ function closeTransientUi() {
   state.editStash = null;
   hideKeypad();
   hideSpeciesBar(false);
-  ["defectDlg", "recDlg", "importDlg", "clearDlg"].forEach(id => {
+  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.open) el.close();
   });
@@ -1327,7 +1311,7 @@ function render() {
         input.setAttribute("wrap", "soft");
       }
       if (c.key === "recommendation") input.setAttribute("list", "recList");
-      if (isPadKey(c.key)) bindNumInput(input);
+      if (isNumKey(c.key)) bindNumInput(input);
       if (c.key === "species") {
         input.setAttribute("readonly", "readonly");
         input.setAttribute("inputmode", "none");
@@ -1409,6 +1393,26 @@ function render() {
           state.recTarget = row.id;
           renderRecPicker();
           document.getElementById("recDlg").showModal();
+        });
+        td.appendChild(pick);
+      }
+      if (c.key === "condition") {
+        input.setAttribute("inputmode", "none");
+        input.setAttribute("autocomplete", "off");
+        input.setAttribute("readonly", "readonly");
+        input.addEventListener("focus", ev => {
+          ev.preventDefault();
+          openConditionDlg(row, input);
+        });
+        const pick = document.createElement("button");
+        pick.type = "button";
+        pick.className = "pick";
+        pick.textContent = "選";
+        pick.title = "選擇 Condition";
+        pick.addEventListener("click", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          openConditionDlg(row, input);
         });
         td.appendChild(pick);
       }
@@ -1523,7 +1527,7 @@ function resolveSpeciesValue(text) {
 
 function isNumKey(key) { return key === "treeNo" || key === "h" || key === "s" || key === "dbh"; }
 function isConditionKey(key) { return key === "condition"; }
-function isPadKey(key) { return isNumKey(key) || isConditionKey(key); }
+function isPadKey(key) { return isNumKey(key); }
 function isMeasureKey(key) { return key === "h" || key === "s" || key === "dbh"; }
 
 const CONDITION_ASPECTS = [
@@ -1571,6 +1575,20 @@ function formatCondition(val) {
   if (parts.every(x => !x)) return "";
   return parts.map(x => x || "-").join("/");
 }
+function currentConditionField() {
+  return document.querySelector('tr[data-id="' + state.conditionTarget + '"] input[data-key="condition"]');
+}
+function openConditionDlg(row, input) {
+  hideKeypad();
+  hideSpeciesBar(true);
+  setActiveRow(row);
+  beginEdit(row, "condition");
+  state.conditionTarget = row.id;
+  renderConditionPad();
+  const dlg = document.getElementById("conditionDlg");
+  if (dlg && !dlg.open) dlg.showModal();
+  if (input) input.blur();
+}
 function applyConditionValue(input, obj) {
   if (!input) return;
   input.value = formatCondition(obj);
@@ -1579,7 +1597,7 @@ function applyConditionValue(input, obj) {
 function renderConditionPad() {
   const box = document.getElementById("conditionPad");
   if (!box) return;
-  const input = state.numTarget;
+  const input = currentConditionField();
   const cur = parseCondition(input ? input.value : "");
   box.replaceChildren();
   CONDITION_ASPECTS.forEach(aspect => {
@@ -1615,7 +1633,7 @@ function renderConditionPad() {
   });
 }
 function clearConditionPad() {
-  applyConditionValue(state.numTarget, { health: "", structure: "", form: "" });
+  applyConditionValue(currentConditionField(), { health: "", structure: "", form: "" });
   renderConditionPad();
 }
 
@@ -1794,16 +1812,14 @@ function showKeypad(input) {
   document.body.classList.add("numpad-open");
   document.body.classList.toggle("mode-treeno", key === "treeNo");
   document.body.classList.toggle("mode-h", key === "h");
-  document.body.classList.toggle("mode-condition", key === "condition");
   syncPrefixButtons();
   syncHOptions();
-  if (key === "condition") renderConditionPad();
-  else renderNumpadKeys(key);
-  if (key !== "condition") setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
+  renderNumpadKeys(key);
+  setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
   if (state.numTarget) settleMeasureField(state.numTarget);
-  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h", "mode-condition");
+  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h");
   state.numTarget = null;
   commitEditStash();
 }
@@ -1923,6 +1939,13 @@ function focusField(tr, key) {
     hideKeypad();
     const input = tr.querySelector('input[data-key="species"]');
     if (input) { openSpeciesBar(tr.dataset.id, input); return true; }
+    return false;
+  }
+  if (key === "condition") {
+    hideKeypad();
+    const input = tr.querySelector('input[data-key="condition"]');
+    const row = input && state.rows.find(r => r.id === tr.dataset.id);
+    if (input && row) { openConditionDlg(row, input); return true; }
     return false;
   }
   const next = tr.querySelector('input[data-key="' + key + '"]');
@@ -2077,8 +2100,7 @@ function initNumpad() {
   });
   document.getElementById("numpadClear").addEventListener("pointerdown", ev => {
     ev.preventDefault(); ev.stopPropagation();
-    if (state.numTarget && isConditionKey(state.numTarget.dataset.key)) clearConditionPad();
-    else numpadPress("清空");
+    numpadPress("清空");
   });
   document.getElementById("numpadNext").addEventListener("pointerdown", ev => {
     ev.preventDefault(); ev.stopPropagation();
@@ -2872,6 +2894,9 @@ document.getElementById("q").addEventListener("input", () => {
 document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
 document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
+document.getElementById("conditionDone").addEventListener("click", () => { document.getElementById("conditionDlg").close(); endUndoCoalesce(); });
+document.getElementById("conditionDlg").addEventListener("close", () => { state.conditionTarget = null; commitEditStash(); });
+document.getElementById("conditionClear").addEventListener("click", () => { clearConditionPad(); });
 document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
 document.getElementById("defectDone").addEventListener("click", () => { document.getElementById("defectDlg").close(); endUndoCoalesce(); });
 document.getElementById("defectDlg").addEventListener("close", () => { state.remarkMod = ""; commitEditStash(); });
