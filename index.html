@@ -161,6 +161,7 @@
   }
   main { padding: 8px 10px calc(16px + var(--safe-bottom)); }
   body.numpad-open main { padding-bottom: 320px; }
+  body.numpad-open.mode-condition main { padding-bottom: calc(16px + var(--safe-bottom)); }
   body.species-open main { padding-top: 8px; }
   .sheet-wrap {
     overflow: auto;
@@ -299,6 +300,7 @@
     max-width: 90vw;
   }
   body.numpad-open .toast { bottom: 300px; }
+  body.numpad-open.mode-condition .toast,
   body.species-open .toast { bottom: 24px; }
   .toast.show { opacity: 1; }
   dialog.modal {
@@ -506,6 +508,25 @@
     box-shadow: 0 -6px 20px rgba(0,0,0,.16);
   }
   body.numpad-open #numpad { display: block; }
+  body.numpad-open.mode-condition #numpad {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inset: 0;
+    bottom: auto;
+    background: rgba(0,0,0,.4);
+    border-top: 0;
+    box-shadow: none;
+    padding: calc(12px + var(--safe-top)) 16px calc(12px + var(--safe-bottom));
+  }
+  body.mode-condition .numpad-panel {
+    width: min(560px, 94vw);
+    background: #cfd6d1;
+    border: 1px solid #9aa59e;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 12px 40px rgba(0,0,0,.28);
+  }
   .numpad-bar {
     display: flex;
     align-items: center;
@@ -788,6 +809,7 @@
   </div>
 </main>
 <div id="numpad">
+  <div class="numpad-panel">
   <div class="numpad-bar">
     <div class="lab" id="numpadLabel">H（m）</div>
     <button type="button" class="danger-lite" id="numpadClear">清除全部</button>
@@ -806,6 +828,7 @@
   </div>
   <div class="numpad-grid" id="numpadGrid"></div>
   <div class="condition-pad" id="conditionPad"></div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <dialog class="modal" id="clearDlg">
@@ -865,7 +888,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "43";
+const APP_VER = "44";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1776,7 +1799,7 @@ function showKeypad(input) {
   syncHOptions();
   if (key === "condition") renderConditionPad();
   else renderNumpadKeys(key);
-  setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
+  if (key !== "condition") setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
   if (state.numTarget) settleMeasureField(state.numTarget);
@@ -2063,7 +2086,7 @@ function initNumpad() {
   });
   document.addEventListener("pointerdown", ev => {
     if (document.body.classList.contains("numpad-open")) {
-      if (ev.target.closest("#numpad")) return;
+      if (ev.target.closest(".numpad-panel")) return;
       if (ev.target.matches && ev.target.matches("input") && isPadKey(ev.target.dataset.key)) return;
       hideKeypad();
     }
