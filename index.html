@@ -687,9 +687,10 @@
   .h-options button.on { background: #f5a024; color: #3a2200; border-color: #d4890f; }
   table.sheet td.h-orange { background: #f5a024; }
   table.sheet td.h-orange input { color: #3a2200; font-weight: 700; }
-  .defect-mods { display: flex; gap: 8px; margin: 0 0 10px; }
+  .defect-mods { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
   .defect-mods button {
     flex: 1;
+    min-width: 72px;
     min-height: 48px;
     font-size: 16px;
     font-weight: 700;
@@ -699,6 +700,7 @@
     border-radius: 8px;
   }
   .defect-mods button.on { background: var(--green); color: #fff; border-color: var(--green); }
+  .defect-tops { margin: 0 0 10px; }
   .numpad-bar button.danger-lite {
     background: #fff; color: var(--danger); border-color: #e0b4b4;
   }
@@ -827,12 +829,12 @@
 <dialog class="modal defect-modal" id="defectDlg">
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
-    <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。Dead 代表 Dead tree。</p>
+    <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead、ASY、PEST、EDW 可直接選。</p>
     <div class="defect-mods" id="defectMods" role="group" aria-label="程度">
       <button type="button" data-mod="Severely">Severely</button>
       <button type="button" data-mod="Large">Large</button>
-      <button type="button" id="defectDeadTree" title="Dead tree" aria-label="Dead，Dead tree">Dead</button>
     </div>
+    <div class="defect-mods defect-tops" id="defectTops" role="group" aria-label="常用備註"></div>
     <div class="defect-locs" id="defectLocs"></div>
     <div class="field"><input id="defectFilter" type="search" placeholder="搜尋其他備註"></div>
     <div class="chips" id="defectChips"></div>
@@ -861,7 +863,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "39";
+const APP_VER = "40";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -872,25 +874,34 @@ const COLS = [
   { key: "remarks", label: "Remarks" },
   { key: "recommendation", label: "Recommendation" }
 ];
+const REMARK_TOP = [
+  { abbr: "Dead", name: "Dead tree" },
+  { abbr: "ASY", name: "Asymmetric crown" },
+  { abbr: "PEST", name: "Sign of pest" },
+  { abbr: "EDW", name: "Exposed dead wood" }
+];
 const REMARK_LOCS = [
-  { key: "crown", label: "Crown", phrase: "crown" },
+  { key: "crown", label: "Crown", phrase: "crown", skipTypes: true },
   { key: "branch", label: "Branch", phrase: "branch" },
   { key: "trunk", label: "Trunk", phrase: "trunk" },
-  { key: "trunkBase", label: "Trunk base", phrase: "trunk base" }
+  { key: "trunkBase", label: "Trunk base", phrase: "trunk base", hide: ["B", "Dead"] }
 ];
 const REMARK_TYPES = [
   { abbr: "W", nameOf: "Wound on " },
   { abbr: "C", nameOf: "Cavity on " },
-  { abbr: "DW", nameOf: "Dead wood on " },
+  { abbr: "EDW", nameOf: "Exposed dead wood on " },
   { abbr: "Dead", nameOf: "Dead " },
   { abbr: "ABC", nameOf: "Abnormal bark crack on " },
   { abbr: "B", nameOf: "Broken " }
 ];
 const REMARK_LOC_EXTRAS = {
   crown: [
-    { abbr: "ASY", name: "Asymmetric crown" },
     { abbr: "Top", name: "Topped" },
-    { abbr: "BL", name: "Broken leader" }
+    { abbr: "SF", name: "Sparse foliage" },
+    { abbr: "DB", name: "Dead branch" },
+    { abbr: "Dieback", name: "Dieback" },
+    { abbr: "ASY", name: "Asymmetric crown" },
+    { abbr: "R", name: "Reduced crown" }
   ],
   trunk: [
     { abbr: "L", name: "Leaning" },
@@ -903,11 +914,12 @@ function remarkTypeName(type, phrase) {
   return type.nameOf + phrase;
 }
 function remarkLocItems(loc) {
-  const items = REMARK_TYPES.map(type => ({ abbr: type.abbr, name: remarkTypeName(type, loc.phrase) }));
+  const types = loc.skipTypes ? [] : REMARK_TYPES.filter(type => !(loc.hide || []).includes(type.abbr));
+  const items = types.map(type => ({ abbr: type.abbr, name: remarkTypeName(type, loc.phrase) }));
   return items.concat(REMARK_LOC_EXTRAS[loc.key] || []);
 }
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
-const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood on branch", "Exposed dead wood on trunk", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
+const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
 const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "" };
@@ -2618,14 +2630,27 @@ function syncRemarkMods() {
   document.querySelectorAll("#defectMods [data-mod]").forEach(b => {
     b.classList.toggle("on", b.dataset.mod === state.remarkMod);
   });
-  const deadBtn = document.getElementById("defectDeadTree");
-  if (deadBtn) {
-    const input = currentDefectField();
-    const selected = new Set(parseDefects(input ? input.value : ""));
-    const on = remarkSelected(selected, "Dead tree");
-    deadBtn.classList.toggle("on", on);
-    deadBtn.setAttribute("aria-pressed", on ? "true" : "false");
-  }
+}
+function renderRemarkTopButtons(selected, input) {
+  const box = document.getElementById("defectTops");
+  if (!box) return;
+  box.replaceChildren();
+  REMARK_TOP.forEach(item => {
+    const on = remarkSelected(selected, item.name);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = on ? "on" : "";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.title = item.name;
+    b.setAttribute("aria-label", item.abbr + "，" + item.name);
+    b.textContent = item.abbr;
+    b.addEventListener("click", ev => {
+      ev.preventDefault();
+      toggleRemarkItem(selected, item.name);
+      applyRemarkSelection(input, selected);
+    });
+    box.appendChild(b);
+  });
 }
 function applyRemarkSelection(input, selected) {
   if (input) {
@@ -2653,9 +2678,10 @@ function renderDefectPicker() {
     });
     chips.appendChild(sp);
   });
+  syncRemarkMods();
+  renderRemarkTopButtons(selected, input);
   const locsBox = document.getElementById("defectLocs");
   locsBox.replaceChildren();
-  syncRemarkMods();
   REMARK_LOCS.forEach(loc => {
     const col = document.createElement("div");
     col.className = "defect-loc";
@@ -2827,13 +2853,6 @@ document.querySelectorAll("#defectMods [data-mod]").forEach(b => {
     state.remarkMod = state.remarkMod === b.dataset.mod ? "" : b.dataset.mod;
     syncRemarkMods();
   });
-});
-document.getElementById("defectDeadTree").addEventListener("click", ev => {
-  ev.preventDefault();
-  const input = currentDefectField();
-  const selected = new Set(parseDefects(input ? input.value : ""));
-  toggleRemarkItem(selected, "Dead tree");
-  applyRemarkSelection(input, selected);
 });
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
