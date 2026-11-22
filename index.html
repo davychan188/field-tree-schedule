@@ -649,7 +649,7 @@
     <button type="button" data-filter="undone">未完成</button>
     <button type="button" data-filter="done">已完成</button>
     <button type="button" data-filter="star">已選⭐</button>
-    <button type="button" data-filter="removed">removed</button>
+    <button type="button" data-filter="removal">Removal</button>
   </div>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／備註／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
@@ -762,7 +762,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "34";
+const APP_VER = "35";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -834,11 +834,14 @@ function isComplete(row) {
 function isStarred(row) {
   return !!(row && parseTreeNo(row.treeNo).star);
 }
+function hasRemoval(row) {
+  return parseDefects(row && row.recommendation).some(x => x === "Removal");
+}
 function rowMatchesFilter(row) {
   if (state.filter === "undone") return isIncomplete(row);
   if (state.filter === "done") return isComplete(row);
   if (state.filter === "star") return isStarred(row);
-  if (state.filter === "removed") return !!row.removed;
+  if (state.filter === "removal") return hasRemoval(row);
   return true;
 }
 function isViewLimited() {
@@ -896,7 +899,7 @@ function load() {
     if (cleaned) try { /* persist after decode */ } catch (e) {}
     if (typeof data.page === "number") state.page = data.page;
     if (data.treePrefix === "T" || data.treePrefix === "AT" || data.treePrefix === "TG") state.treePrefix = data.treePrefix;
-    if (data.filter === "undone" || data.filter === "done" || data.filter === "star" || data.filter === "removed") state.filter = data.filter;
+    if (data.filter === "undone" || data.filter === "done" || data.filter === "star" || data.filter === "removal") state.filter = data.filter;
     if (cleaned) save();
   }
   padToPageMultiple();
@@ -2593,7 +2596,7 @@ function syncFilterButtons() {
   });
 }
 function setViewFilter(filter) {
-  const allowed = { all: 1, undone: 1, done: 1, star: 1, removed: 1 };
+  const allowed = { all: 1, undone: 1, done: 1, star: 1, removal: 1 };
   const next = allowed[filter] ? filter : "all";
   if (state.filter === next) return;
   hideKeypad();
@@ -2606,7 +2609,7 @@ function setViewFilter(filter) {
   if (next === "undone" && !state.rows.some(isIncomplete)) toast("而家冇未完成記錄");
   else if (next === "done" && !state.rows.some(isComplete)) toast("而家冇已完成記錄");
   else if (next === "star" && !state.rows.some(isStarred)) toast("而家冇已選⭐記錄");
-  else if (next === "removed" && !state.rows.some(r => r.removed)) toast("而家冇 removed 記錄");
+  else if (next === "removal" && !state.rows.some(hasRemoval)) toast("而家冇已選 Removal 嘅記錄");
 }
 function initViewFilter() {
   document.querySelectorAll("#viewFilter button").forEach(b => {
