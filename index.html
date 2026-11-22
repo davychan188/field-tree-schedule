@@ -598,7 +598,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 15;
-const APP_VER = "25";
+const APP_VER = "26";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -647,9 +647,12 @@ function filteredIndexes() {
 function isIncomplete(row) {
   return isFilled(row) && !row.done && !row.removed;
 }
+function isComplete(row) {
+  return isFilled(row) && (!!row.done || !!row.removed);
+}
 function rowMatchesFilter(row) {
   if (state.filter === "undone") return isIncomplete(row);
-  if (state.filter === "done") return isFilled(row) && !!row.done;
+  if (state.filter === "done") return isComplete(row);
   return true;
 }
 function isViewLimited() {
@@ -2153,7 +2156,7 @@ function setViewFilter(filter) {
   syncFilterButtons();
   render();
   if (next === "undone" && !state.rows.some(isIncomplete)) toast("而家冇未完成記錄");
-  else if (next === "done" && !state.rows.some(r => isFilled(r) && r.done)) toast("而家冇已完成記錄");
+  else if (next === "done" && !state.rows.some(isComplete)) toast("而家冇已完成記錄");
 }
 function initViewFilter() {
   document.querySelectorAll("#viewFilter button").forEach(b => {
