@@ -389,6 +389,19 @@
     font-weight: 500;
     white-space: normal;
   }
+  #recChoices button {
+    min-height: 68px;
+    padding: 10px 12px;
+    font-size: 20px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+  #recChoices button .rec-box {
+    flex-basis: 26px;
+    width: 26px;
+    height: 26px;
+    font-size: 17px;
+  }
   .rec-grid button .rec-box {
     flex: 0 0 22px;
     width: 22px;
@@ -563,6 +576,32 @@
   .prefixes button { flex: 1; min-height: 42px; font-size: 16px; font-weight: 700; background: #fff; color: var(--green-dark); }
   .prefixes button.on { background: var(--green); color: #fff; }
   .prefixes button[data-prefix="removed"] { font-size: 13px; flex: 1.4; }
+  .h-options { display: none; gap: 6px; max-width: 420px; margin: 0 auto 6px; }
+  body.mode-h .h-options { display: flex; }
+  .h-options button {
+    flex: 1;
+    min-height: 42px;
+    font-size: 16px;
+    font-weight: 700;
+    background: #fff;
+    color: #9a4d00;
+    border-color: #e0a24a;
+  }
+  .h-options button.on { background: #f5a024; color: #3a2200; border-color: #d4890f; }
+  table.sheet td.h-orange { background: #f5a024; }
+  table.sheet td.h-orange input { color: #3a2200; font-weight: 700; }
+  .defect-mods { display: flex; gap: 8px; margin: 0 0 10px; }
+  .defect-mods button {
+    flex: 1;
+    min-height: 48px;
+    font-size: 16px;
+    font-weight: 700;
+    background: #fff;
+    color: var(--green-dark);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .defect-mods button.on { background: var(--green); color: #fff; border-color: var(--green); }
   .numpad-bar button.danger-lite {
     background: #fff; color: var(--danger); border-color: #e0b4b4;
   }
@@ -609,6 +648,8 @@
     <button type="button" data-filter="all">全部</button>
     <button type="button" data-filter="undone">未完成</button>
     <button type="button" data-filter="done">已完成</button>
+    <button type="button" data-filter="star">已選⭐</button>
+    <button type="button" data-filter="removed">removed</button>
   </div>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／備註／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
@@ -658,6 +699,9 @@
     <button type="button" data-prefix="⭐">⭐</button>
     <button type="button" data-prefix="removed">removed</button>
   </div>
+  <div class="prefixes h-options" id="hOptions">
+    <button type="button" id="btnOrange">Orange</button>
+  </div>
   <div class="numpad-grid" id="numpadGrid"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
@@ -685,7 +729,11 @@
 <dialog class="modal defect-modal" id="defectDlg">
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
-    <p>常用快捷，可同時選多項</p>
+    <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面</p>
+    <div class="defect-mods" id="defectMods" role="group" aria-label="程度">
+      <button type="button" data-mod="Severely">Severely</button>
+      <button type="button" data-mod="Large">Large</button>
+    </div>
     <div class="rec-grid" id="defectShortcuts"></div>
     <div class="field"><input id="defectFilter" type="search" placeholder="搜尋其他備註"></div>
     <div class="chips" id="defectChips"></div>
@@ -714,7 +762,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "33";
+const APP_VER = "34";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -730,23 +778,26 @@ const REMARK_SHORTCUTS = [
   { abbr: "ABCT", name: "Abnormal bark crack on trunk" },
   { abbr: "ASY", name: "Asymmetric crown" },
   { abbr: "BB", name: "Broken branch" },
+  { abbr: "C", name: "Cavity" },
   { abbr: "COT", name: "Co-dominant trunks" },
   { abbr: "DB", name: "Dead branch" },
   { abbr: "DT", name: "Dead tree" },
   { abbr: "L", name: "Leaning" },
+  { abbr: "OXB", name: "Overextended branch" },
+  { abbr: "RPM", name: "Root plate movement" },
   { abbr: "SF", name: "Sparse foliage" },
   { abbr: "WLT", name: "Wound on lower trunk" },
   { abbr: "WOB", name: "Wound on branch" },
   { abbr: "WOT", name: "Wound on trunk" }
 ];
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
-const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on trunk", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken leader", "Bulge", "Burls", "Canker", "Cavity on branch", "Cavity on roots", "Cavity on trunk", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead twigs", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood on branch", "Exposed dead wood on trunk", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk union", "Wound sealed by concrete"];
+const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on trunk", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken leader", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on roots", "Cavity on trunk", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead twigs", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood on branch", "Exposed dead wood on trunk", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
-const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null, activeRowId: null, measureStash: null };
+const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "" };
 
 function emptyRow() {
-  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", remarks: "", recommendation: "", done: false, removed: false };
+  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", remarks: "", recommendation: "", done: false, removed: false, orange: false };
 }
 function isFilled(row) {
   return COLS.some(c => String(row[c.key] || "").trim() !== "");
@@ -780,9 +831,14 @@ function isIncomplete(row) {
 function isComplete(row) {
   return isFilled(row) && (!!row.done || !!row.removed);
 }
+function isStarred(row) {
+  return !!(row && parseTreeNo(row.treeNo).star);
+}
 function rowMatchesFilter(row) {
   if (state.filter === "undone") return isIncomplete(row);
   if (state.filter === "done") return isComplete(row);
+  if (state.filter === "star") return isStarred(row);
+  if (state.filter === "removed") return !!row.removed;
   return true;
 }
 function isViewLimited() {
@@ -822,6 +878,8 @@ function load() {
       row.done = dv === true || dv === 1 || dv === "1" || String(dv).trim().toLowerCase() === "y" || String(dv).trim().toLowerCase() === "true" || String(dv).trim() === "完成";
       const rv = r && r.removed;
       row.removed = rv === true || rv === 1 || rv === "1" || String(rv).trim().toLowerCase() === "y" || String(rv).trim().toLowerCase() === "true" || String(rv).trim().toLowerCase() === "removed";
+      const ov = r && r.orange;
+      row.orange = ov === true || ov === 1 || ov === "1" || String(ov).trim().toLowerCase() === "y" || String(ov).trim().toLowerCase() === "true" || String(ov).trim().toLowerCase() === "orange";
       COLS.forEach(c => {
         const cur = row[c.key];
         if (typeof cur === "string" && cur.includes("&")) {
@@ -838,7 +896,7 @@ function load() {
     if (cleaned) try { /* persist after decode */ } catch (e) {}
     if (typeof data.page === "number") state.page = data.page;
     if (data.treePrefix === "T" || data.treePrefix === "AT" || data.treePrefix === "TG") state.treePrefix = data.treePrefix;
-    if (data.filter === "undone" || data.filter === "done") state.filter = data.filter;
+    if (data.filter === "undone" || data.filter === "done" || data.filter === "star" || data.filter === "removed") state.filter = data.filter;
     if (cleaned) save();
   }
   padToPageMultiple();
@@ -876,6 +934,7 @@ function syncUndoButtons() {
 }
 function endUndoCoalesce() { undoCoalesce = null; }
 function closeTransientUi() {
+  state.editStash = null;
   hideKeypad();
   hideSpeciesBar(false);
   ["defectDlg", "recDlg", "importDlg", "clearDlg"].forEach(id => {
@@ -937,6 +996,47 @@ function toast(msg) {
   toast._t = setTimeout(() => el.classList.remove("show"), 2200);
 }
 
+function maybeAutoDone(row) {
+  if (restoring || !row || row.done) return;
+  row.done = true;
+  const tr = document.querySelector('table.sheet tbody tr[data-id="' + row.id + '"]');
+  if (tr) {
+    tr.classList.add("done");
+    const num = tr.querySelector("td.num");
+    if (num) {
+      num.classList.add("done");
+      num.setAttribute("aria-pressed", "true");
+      num.title = "取消完成";
+    }
+  }
+  syncMarkDoneButton();
+  updateCountAndLists();
+}
+function beginEdit(row, key) {
+  if (restoring || !row || !key) return;
+  if (state.editStash && state.editStash.rowId === row.id && state.editStash.key === key) return;
+  commitEditStash();
+  const original = key === "species" ? row.species : String(row[key] || "");
+  state.editStash = { rowId: row.id, key: key, original: original };
+}
+function commitEditStash() {
+  const st = state.editStash;
+  if (!st) return;
+  const row = state.rows.find(r => r.id === st.rowId);
+  state.editStash = null;
+  if (!row) return;
+  const cur = st.key === "species" ? row.species : String(row[st.key] == null ? "" : row[st.key]);
+  if (String(st.original || "").trim() !== String(cur || "").trim()) maybeAutoDone(row);
+  renderIfFilterStale();
+}
+function renderIfFilterStale() {
+  if (!state.filter || state.filter === "all") return;
+  const shown = document.querySelectorAll("table.sheet tbody tr");
+  for (let i = 0; i < shown.length; i++) {
+    const row = state.rows.find(r => r.id === shown[i].dataset.id);
+    if (row && !rowMatchesFilter(row)) { render(); return; }
+  }
+}
 function currentActiveRow() {
   const id = state.activeRowId;
   if (!id) return null;
@@ -1029,6 +1129,7 @@ function render() {
     COLS.forEach(c => {
       const td = document.createElement("td");
       if (isNumKey(c.key)) td.className = "num-col";
+      if (c.key === "h" && row.orange) td.className = ((td.className || "") + " h-orange").trim();
       if (c.key === "remarks" || c.key === "recommendation") td.className = "def-cell";
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement(c.key === "remarks" ? "textarea" : "input");
@@ -1066,6 +1167,7 @@ function render() {
       });
       input.addEventListener("focus", () => {
         setActiveRow(row);
+        beginEdit(row, c.key);
       });
       td.appendChild(input);
       if (c.key === "species") {
@@ -1093,7 +1195,9 @@ function render() {
           hideKeypad();
           hideSpeciesBar(true);
           setActiveRow(row);
+          beginEdit(row, "remarks");
           state.defectTarget = row.id;
+          state.remarkMod = "";
           document.getElementById("defectFilter").value = "";
           renderDefectPicker();
           document.getElementById("defectDlg").showModal();
@@ -1112,6 +1216,7 @@ function render() {
           hideKeypad();
           hideSpeciesBar(true);
           setActiveRow(row);
+          beginEdit(row, "recommendation");
           state.recTarget = row.id;
           renderRecPicker();
           document.getElementById("recDlg").showModal();
@@ -1409,14 +1514,17 @@ function showKeypad(input) {
   document.getElementById("numpadLabel").textContent = NUM_LABELS[key] || key;
   document.body.classList.add("numpad-open");
   document.body.classList.toggle("mode-treeno", key === "treeNo");
+  document.body.classList.toggle("mode-h", key === "h");
   syncPrefixButtons();
+  syncHOptions();
   renderNumpadKeys(key);
   setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
   if (state.numTarget) settleMeasureField(state.numTarget);
-  document.body.classList.remove("numpad-open", "mode-treeno");
+  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h");
   state.numTarget = null;
+  commitEditStash();
 }
 function currentTargetRow() {
   const input = state.numTarget;
@@ -1437,6 +1545,25 @@ function syncPrefixButtons() {
     else on = key === cur.prefix;
     b.classList.toggle("on", on);
   });
+}
+function syncHOptions() {
+  const btn = document.getElementById("btnOrange");
+  if (!btn) return;
+  const row = currentTargetRow();
+  btn.classList.toggle("on", !!(row && row.orange));
+}
+function toggleRowOrange() {
+  const row = currentTargetRow();
+  const input = state.numTarget;
+  if (!row || !input || input.dataset.key !== "h") return;
+  pushUndo();
+  endUndoCoalesce();
+  row.orange = !row.orange;
+  maybeAutoDone(row);
+  const td = input.closest("td");
+  if (td) td.classList.toggle("h-orange", row.orange);
+  save();
+  syncHOptions();
 }
 function toggleRowRemoved() {
   const row = currentTargetRow();
@@ -1564,6 +1691,7 @@ function hideSpeciesBar(commit) {
   if (commit !== false) commitSpeciesBar();
   document.body.classList.remove("species-open");
   state.speciesTarget = null;
+  if (commit !== false) commitEditStash();
 }
 function commitSpeciesBar() {
   const input = currentSpeciesInput();
@@ -1831,13 +1959,13 @@ function isNumeric(s) {
 }
 
 function buildSheetXml(rows) {
-  const headers = COLS.map(c => c.label).concat(["完成", "Removed"]);
+  const headers = COLS.map(c => c.label).concat(["完成", "Removed", "Orange"]);
   let out = [];
   out.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
   out.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">');
   out.push('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
   const lastRow = Math.max(2 + rows.length, 2);
-  out.push('<dimension ref="A1:J' + lastRow + '"/>');
+  out.push('<dimension ref="A1:K' + lastRow + '"/>');
   out.push('<sheetViews><sheetView workbookViewId="0"/></sheetViews>');
   out.push('<sheetFormatPr defaultRowHeight="16"/>');
   out.push('<cols>');
@@ -1847,7 +1975,7 @@ function buildSheetXml(rows) {
   out.push('<col min="4" max="6" width="8" customWidth="1"/>');
   out.push('<col min="7" max="7" width="19.375" customWidth="1"/>');
   out.push('<col min="8" max="8" width="28" customWidth="1"/>');
-  out.push('<col min="9" max="10" width="10" customWidth="1"/>');
+  out.push('<col min="9" max="11" width="10" customWidth="1"/>');
   out.push('</cols><sheetData>');
   out.push('<row r="1"><c r="A1" t="inlineStr" s="1"><is><t>Tree Assessment Schedule</t></is></c></row>');
   let h = '<row r="2">';
@@ -1875,6 +2003,9 @@ function buildSheetXml(rows) {
     }
     if (row.removed) {
       line += '<c r="J' + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
+    }
+    if (row.orange) {
+      line += '<c r="K' + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
     }
     line += '</row>';
     out.push(line);
@@ -2067,7 +2198,8 @@ function mapImportedRows(table) {
     remarks: ["remarks", "remark", "defect", "defects"],
     recommendation: ["recommendation", "recommendations", "rec"],
     done: ["完成", "done", "completed", "complete"],
-    removed: ["removed", "remove", "移除", "已移除"]
+    removed: ["removed", "remove", "移除", "已移除"],
+    orange: ["orange", "橙色", "橘色"]
   };
   for (let i = 0; i < Math.min(table.length, 15); i++) {
     const labels = (table[i] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
@@ -2083,6 +2215,7 @@ function mapImportedRows(table) {
   });
   const doneIdx = headers.findIndex(h => aliases.done.includes(h));
   const removedIdx = headers.findIndex(h => aliases.removed.includes(h));
+  const orangeIdx = headers.findIndex(h => aliases.orange.includes(h));
   if (idx.batch < 0 && idx.treeNo < 0) {
     // fallback to A-G order
     COLS.forEach((c, i) => { if (idx[c.key] < 0) idx[c.key] = i; });
@@ -2102,6 +2235,10 @@ function mapImportedRows(table) {
     if (removedIdx >= 0) {
       const raw = String(table[i][removedIdx] == null ? "" : table[i][removedIdx]).trim().toLowerCase();
       rec.removed = ["y", "yes", "true", "1", "removed", "remove", "移除", "已移除", "✓", "✔"].includes(raw);
+    }
+    if (orangeIdx >= 0) {
+      const raw = String(table[i][orangeIdx] == null ? "" : table[i][orangeIdx]).trim().toLowerCase();
+      rec.orange = ["y", "yes", "true", "1", "orange", "橙色", "橘色", "✓", "✔"].includes(raw);
     }
     if (isFilled(rec)) out.push(rec);
   }
@@ -2202,6 +2339,36 @@ function currentDefectField() {
 function parseDefects(s) {
   return String(s || "").split(/[,;，；]+/).map(x => x.trim()).filter(Boolean);
 }
+const REMARK_MODS = ["Severely", "Large"];
+function remarkBaseName(name) {
+  let s = String(name || "");
+  REMARK_MODS.forEach(m => {
+    if (s.startsWith(m + " ")) s = s.slice(m.length + 1);
+  });
+  return s;
+}
+function applyRemarkMod(name) {
+  const base = remarkBaseName(name);
+  return state.remarkMod ? state.remarkMod + " " + base : base;
+}
+function toggleRemarkItem(selected, name) {
+  const next = applyRemarkMod(name);
+  const existing = [...selected].find(s => remarkBaseName(s) === remarkBaseName(name));
+  if (existing === next) selected.delete(existing);
+  else {
+    if (existing) selected.delete(existing);
+    selected.add(next);
+  }
+}
+function remarkSelected(selected, name) {
+  const base = remarkBaseName(name);
+  return [...selected].some(s => remarkBaseName(s) === base);
+}
+function syncRemarkMods() {
+  document.querySelectorAll("#defectMods button").forEach(b => {
+    b.classList.toggle("on", b.dataset.mod === state.remarkMod);
+  });
+}
 function applyRemarkSelection(input, selected) {
   if (input) {
     input.value = [...selected].join(", ");
@@ -2230,8 +2397,9 @@ function renderDefectPicker() {
   });
   const shorts = document.getElementById("defectShortcuts");
   shorts.replaceChildren();
+  syncRemarkMods();
   REMARK_SHORTCUTS.forEach(item => {
-    const on = selected.has(item.name);
+    const on = remarkSelected(selected, item.name);
     const b = document.createElement("button");
     b.type = "button";
     b.className = on ? "on" : "";
@@ -2247,7 +2415,7 @@ function renderDefectPicker() {
     b.appendChild(mark);
     b.appendChild(abbr);
     b.addEventListener("click", () => {
-      if (selected.has(item.name)) selected.delete(item.name); else selected.add(item.name);
+      toggleRemarkItem(selected, item.name);
       applyRemarkSelection(input, selected);
     });
     shorts.appendChild(b);
@@ -2267,9 +2435,9 @@ function renderDefectPicker() {
         const b = document.createElement("button");
         b.type = "button";
         b.textContent = d;
-        if (selected.has(d)) b.className = "on";
+        if (remarkSelected(selected, d)) b.className = "on";
         b.addEventListener("click", () => {
-          if (selected.has(d)) selected.delete(d); else selected.add(d);
+          toggleRemarkItem(selected, d);
           applyRemarkSelection(input, selected);
         });
         box.appendChild(b);
@@ -2375,12 +2543,21 @@ document.getElementById("importAppend").addEventListener("click", () => applyImp
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
 document.getElementById("defectFilter").addEventListener("input", renderDefectPicker);
 document.getElementById("defectDone").addEventListener("click", () => { document.getElementById("defectDlg").close(); endUndoCoalesce(); });
+document.getElementById("defectDlg").addEventListener("close", () => { state.remarkMod = ""; commitEditStash(); });
+document.querySelectorAll("#defectMods button").forEach(b => {
+  b.addEventListener("click", ev => {
+    ev.preventDefault();
+    state.remarkMod = state.remarkMod === b.dataset.mod ? "" : b.dataset.mod;
+    syncRemarkMods();
+  });
+});
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
   if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
   renderDefectPicker();
 });
 document.getElementById("recDone").addEventListener("click", () => { document.getElementById("recDlg").close(); endUndoCoalesce(); });
+document.getElementById("recDlg").addEventListener("close", () => { commitEditStash(); });
 document.getElementById("recClear").addEventListener("click", () => {
   const input = currentRecField();
   if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
@@ -2416,7 +2593,8 @@ function syncFilterButtons() {
   });
 }
 function setViewFilter(filter) {
-  const next = filter === "undone" || filter === "done" ? filter : "all";
+  const allowed = { all: 1, undone: 1, done: 1, star: 1, removed: 1 };
+  const next = allowed[filter] ? filter : "all";
   if (state.filter === next) return;
   hideKeypad();
   hideSpeciesBar(true);
@@ -2427,6 +2605,8 @@ function setViewFilter(filter) {
   render();
   if (next === "undone" && !state.rows.some(isIncomplete)) toast("而家冇未完成記錄");
   else if (next === "done" && !state.rows.some(isComplete)) toast("而家冇已完成記錄");
+  else if (next === "star" && !state.rows.some(isStarred)) toast("而家冇已選⭐記錄");
+  else if (next === "removed" && !state.rows.some(r => r.removed)) toast("而家冇 removed 記錄");
 }
 function initViewFilter() {
   document.querySelectorAll("#viewFilter button").forEach(b => {
@@ -2438,6 +2618,10 @@ function initViewFilter() {
   syncFilterButtons();
 }
 
+document.getElementById("btnOrange").addEventListener("click", ev => {
+  ev.preventDefault();
+  toggleRowOrange();
+});
 initDefectList();
 initRecList();
 initNumpad();
