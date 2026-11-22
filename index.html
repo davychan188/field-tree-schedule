@@ -380,6 +380,13 @@
     color: #fff;
   }
   .rec-grid button .rec-box::before { content: "✓"; }
+  .rec-grid .abbr {
+    flex: 0 0 auto;
+    min-width: 2.8em;
+    font-weight: 700;
+    color: var(--green-dark);
+  }
+  dialog.modal.defect-modal { width: min(640px, 96vw); }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   #file { display: none; }
   #numpad {
@@ -623,10 +630,12 @@
     </div>
   </div>
 </dialog>
-<dialog class="modal" id="defectDlg">
+<dialog class="modal defect-modal" id="defectDlg">
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
-    <div class="field"><input id="defectFilter" type="search" placeholder="搜尋備註"></div>
+    <p>常用快捷，可同時選多項</p>
+    <div class="rec-grid" id="defectShortcuts"></div>
+    <div class="field"><input id="defectFilter" type="search" placeholder="搜尋其他備註"></div>
     <div class="chips" id="defectChips"></div>
     <div class="defect-list" id="defectChoices"></div>
     <div class="modal-actions">
@@ -653,7 +662,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 15;
-const APP_VER = "28";
+const APP_VER = "29";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -663,6 +672,16 @@ const COLS = [
   { key: "dbh", label: "DBH", unit: "mm" },
   { key: "remarks", label: "Remarks" },
   { key: "recommendation", label: "Recommendation" }
+];
+const REMARK_SHORTCUTS = [
+  { abbr: "asy", name: "Asymmetric crown" },
+  { abbr: "COT", name: "Co-dominant trunks" },
+  { abbr: "DB", name: "Dead branch" },
+  { abbr: "DT", name: "Dead tree" },
+  { abbr: "L", name: "Leaning" },
+  { abbr: "SF", name: "Sparse foliage" },
+  { abbr: "WOB", name: "Wound on branch" },
+  { abbr: "WOT", name: "Wound on trunk" }
 ];
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
 const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on trunk", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken leader", "Bulge", "Burls", "Canker", "Cavity on branch", "Cavity on roots", "Cavity on trunk", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead twigs", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood on branch", "Exposed dead wood on trunk", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on roots", "Wound on trunk", "Wound on trunk union", "Wound sealed by concrete"];
@@ -2070,6 +2089,13 @@ function currentDefectField() {
 function parseDefects(s) {
   return String(s || "").split(/[,;，；]+/).map(x => x.trim()).filter(Boolean);
 }
+function applyRemarkSelection(input, selected) {
+  if (input) {
+    input.value = [...selected].join(", ");
+    input.dispatchEvent(new Event("input"));
+  }
+  renderDefectPicker();
+}
 function renderDefectPicker() {
   const input = currentDefectField();
   const selected = new Set(parseDefects(input ? input.value : ""));
@@ -2082,6 +2108,32 @@ function renderDefectPicker() {
     sp.textContent = d;
     chips.appendChild(sp);
   });
+  const shorts = document.getElementById("defectShortcuts");
+  shorts.replaceChildren();
+  REMARK_SHORTCUTS.forEach(item => {
+    const on = selected.has(item.name);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = on ? "on" : "";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.title = item.name;
+    const mark = document.createElement("span");
+    mark.className = "rec-box";
+    mark.setAttribute("aria-hidden", "true");
+    const abbr = document.createElement("span");
+    abbr.className = "abbr";
+    abbr.textContent = item.abbr;
+    const lab = document.createElement("span");
+    lab.textContent = item.name;
+    b.appendChild(mark);
+    b.appendChild(abbr);
+    b.appendChild(lab);
+    b.addEventListener("click", () => {
+      if (selected.has(item.name)) selected.delete(item.name); else selected.add(item.name);
+      applyRemarkSelection(input, selected);
+    });
+    shorts.appendChild(b);
+  });
   const box = document.getElementById("defectChoices");
   box.replaceChildren();
   DEFECTS.filter(d => !q || d.toLowerCase().includes(q)).forEach(d => {
@@ -2091,11 +2143,7 @@ function renderDefectPicker() {
     if (selected.has(d)) b.className = "on";
     b.addEventListener("click", () => {
       if (selected.has(d)) selected.delete(d); else selected.add(d);
-      if (input) {
-        input.value = [...selected].join(", ");
-        input.dispatchEvent(new Event("input"));
-      }
-      renderDefectPicker();
+      applyRemarkSelection(input, selected);
     });
     box.appendChild(b);
   });
