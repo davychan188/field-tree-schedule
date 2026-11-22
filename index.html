@@ -244,6 +244,15 @@
   table.sheet tbody tr.done.removed:nth-child(even) { background: #e6e6e6; }
   table.sheet tbody tr.removed.active,
   table.sheet tbody tr.done.removed.active { background: #dadada; }
+  table.sheet tbody tr.search-hit { background: #fff3c4; }
+  table.sheet tbody tr.search-hit:nth-child(even) { background: #ffe9a8; }
+  table.sheet tbody tr.search-hit.done { background: #f3e6a0; }
+  table.sheet tbody tr.search-hit.done:nth-child(even) { background: #eedb8c; }
+  table.sheet tbody tr.search-hit.removed,
+  table.sheet tbody tr.search-hit.removed:nth-child(even),
+  table.sheet tbody tr.search-hit.done.removed,
+  table.sheet tbody tr.search-hit.done.removed:nth-child(even) { background: #efe3b8; }
+  table.sheet tbody tr.search-hit td.num { box-shadow: inset 4px 0 0 #e39b00; }
   table.sheet tbody tr.removed td,
   table.sheet tbody tr.removed td input,
   table.sheet tbody tr.removed td textarea { color: #5c5c5c; }
@@ -762,7 +771,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "35";
+const APP_VER = "36";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -813,8 +822,35 @@ function emptyRowWithId() {
   r.id = uid();
   return r;
 }
+function parseNumberQuery(q) {
+  const s = String(q || "").trim().replace(/[\s-]+/g, "");
+  if (!s) return null;
+  const m = s.match(/^(⭐)?(AT|TG|T)?(\d+)$/i);
+  if (!m) return null;
+  return { star: !!m[1], prefix: (m[2] || "").toUpperCase(), num: String(Number(m[3])) };
+}
+function treeNoMatchesQuery(row, nq) {
+  if (!row || !nq) return false;
+  const p = parseTreeNo(row.treeNo);
+  const digits = String(p.rest || "").trim();
+  if (!/^\d+$/.test(digits)) return false;
+  if (nq.prefix && p.prefix !== nq.prefix) return false;
+  if (nq.star && !p.star) return false;
+  return String(Number(digits)) === nq.num;
+}
+function locateTreeIndexes(nq) {
+  const idx = [];
+  if (!nq) return idx;
+  state.rows.forEach((row, i) => {
+    if (treeNoMatchesQuery(row, nq)) idx.push(i);
+  });
+  return idx;
+}
 function filteredIndexes() {
-  const q = document.getElementById("q").value.trim().toLowerCase();
+  const raw = document.getElementById("q").value.trim();
+  const nq = parseNumberQuery(raw);
+  if (nq) return state.rows.map((_, i) => i);
+  const q = raw.toLowerCase();
   const idx = [];
   state.rows.forEach((row, i) => {
     if (!rowMatchesFilter(row)) return;
@@ -1110,6 +1146,7 @@ function render() {
     if (row.done) tr.classList.add("done");
     if (row.removed) tr.classList.add("removed");
     if (state.activeRowId && row.id === state.activeRowId) tr.classList.add("active");
+    if (state.searchHits && state.searchHits.has(row.id)) tr.classList.add("search-hit");
     const num = document.createElement("td");
     num.className = "num" + (row.done ? " done" : "");
     num.textContent = String(rowIndex + 1);
@@ -1241,6 +1278,8 @@ function render() {
       el.focus({ preventScroll: true });
     }
   }
+  const hit = document.querySelector("table.sheet tbody tr.search-hit");
+  if (hit) hit.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
 function updateCountAndLists() {
@@ -2540,7 +2579,19 @@ document.getElementById("file").addEventListener("change", ev => {
   ev.target.value = "";
   if (f) handleFile(f);
 });
-document.getElementById("q").addEventListener("input", () => { state.page = 0; render(); });
+document.getElementById("q").addEventListener("input", () => {
+  const raw = document.getElementById("q").value.trim();
+  const nq = parseNumberQuery(raw);
+  if (nq) {
+    const hits = locateTreeIndexes(nq);
+    state.searchHits = new Set(hits.map(i => state.rows[i].id));
+    if (hits.length) state.page = Math.floor(hits[0] / PAGE_SIZE);
+  } else {
+    state.searchHits = null;
+    state.page = 0;
+  }
+  render();
+});
 document.getElementById("importCancel").addEventListener("click", () => { state.pendingImport = null; document.getElementById("importDlg").close(); });
 document.getElementById("importAppend").addEventListener("click", () => applyImport("append"));
 document.getElementById("importReplace").addEventListener("click", () => applyImport("replace"));
