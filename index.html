@@ -198,6 +198,7 @@
   table.sheet col.c-tree { width: 76px; }
   table.sheet col.c-sp { width: 118px; }
   table.sheet col.c-h, table.sheet col.c-s, table.sheet col.c-dbh { width: 40px; }
+  table.sheet col.c-cond { width: 78px; }
   table.sheet col.c-def { width: 96px; }
   table.sheet col.c-rec { width: 108px; }
   table.sheet col.c-act { width: 44px; }
@@ -500,6 +501,62 @@
     border-radius: 8px;
   }
   .numpad-grid button.wide { font-size: 20px; }
+  body.mode-condition .numpad-grid,
+  body.mode-condition .prefixes,
+  body.mode-condition .h-options { display: none; }
+  body.mode-condition .numpad-bar { max-width: 560px; }
+  .condition-pad {
+    display: none;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  body.mode-condition .condition-pad { display: grid; }
+  .condition-group {
+    background: #fff;
+    border: 1px solid #b0b8b3;
+    border-radius: 10px;
+    padding: 8px 6px 6px;
+  }
+  .condition-group .aspect {
+    display: block;
+    width: 100%;
+    margin: 0 0 6px;
+    padding: 8px 4px;
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: #e7f0ea;
+    color: var(--green-dark);
+    font-size: 15px;
+    font-weight: 800;
+    pointer-events: none;
+  }
+  .condition-group .opts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .condition-group .opts button {
+    min-height: 48px;
+    font-size: 18px;
+    font-weight: 800;
+    background: #f7faf8;
+    color: #111;
+    border: 1px solid #b0b8b3;
+    border-radius: 8px;
+  }
+  .condition-group .opts button.on {
+    background: var(--green);
+    color: #fff;
+    border-color: var(--green);
+  }
+  table.sheet td.num-col input[data-key="condition"] {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
   .field { display: flex; flex-direction: column; gap: 4px; }
   .field input {
     width: 100%;
@@ -660,7 +717,7 @@
     <button type="button" data-filter="star">已選⭐</button>
     <button type="button" data-filter="removal">Removal</button>
   </div>
-  <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／備註／建議" autocomplete="off"></div>
+  <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／Condition／備註／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
 <div class="bulk-prefix" id="bulkPrefix">
@@ -675,7 +732,7 @@
     <table class="sheet" id="table">
       <colgroup>
         <col class="c-num"><col class="c-batch"><col class="c-tree"><col class="c-sp">
-        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-def"><col class="c-rec">
+        <col class="c-h"><col class="c-s"><col class="c-dbh"><col class="c-cond"><col class="c-def"><col class="c-rec">
       </colgroup>
       <thead>
         <tr>
@@ -686,6 +743,7 @@
           <th>H <span class="u">m</span></th>
           <th>S <span class="u">m</span></th>
           <th>DBH <span class="u">mm</span></th>
+          <th>Condition <span class="u">H / S / F</span></th>
           <th>Remarks</th>
           <th>Recommendation</th>
         </tr>
@@ -712,6 +770,7 @@
     <button type="button" id="btnOrange">Orange</button>
   </div>
   <div class="numpad-grid" id="numpadGrid"></div>
+  <div class="condition-pad" id="conditionPad"></div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <dialog class="modal" id="clearDlg">
@@ -771,7 +830,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "36";
+const APP_VER = "37";
 const COLS = [
   { key: "batch", label: "Batch" },
   { key: "treeNo", label: "Tree No." },
@@ -779,6 +838,7 @@ const COLS = [
   { key: "h", label: "H", unit: "m" },
   { key: "s", label: "S", unit: "m" },
   { key: "dbh", label: "DBH", unit: "mm" },
+  { key: "condition", label: "Condition" },
   { key: "remarks", label: "Remarks" },
   { key: "recommendation", label: "Recommendation" }
 ];
@@ -806,7 +866,7 @@ const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Calliste
 const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "" };
 
 function emptyRow() {
-  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", remarks: "", recommendation: "", done: false, removed: false, orange: false };
+  return { batch: "", treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", recommendation: "", done: false, removed: false, orange: false };
 }
 function isFilled(row) {
   return COLS.some(c => String(row[c.key] || "").trim() !== "");
@@ -1168,12 +1228,12 @@ function render() {
     tr.appendChild(num);
     COLS.forEach(c => {
       const td = document.createElement("td");
-      if (isNumKey(c.key)) td.className = "num-col";
+      if (isNumKey(c.key) || isConditionKey(c.key)) td.className = "num-col";
       if (c.key === "h" && row.orange) td.className = ((td.className || "") + " h-orange").trim();
       if (c.key === "remarks" || c.key === "recommendation") td.className = "def-cell";
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement(c.key === "remarks" ? "textarea" : "input");
-      input.value = c.key === "species" ? speciesDisplay(row.species) : (row[c.key] || "");
+      input.value = c.key === "species" ? speciesDisplay(row.species) : (c.key === "condition" ? formatCondition(row[c.key]) : (row[c.key] || ""));
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
       if (c.key === "remarks") {
@@ -1181,7 +1241,7 @@ function render() {
         input.setAttribute("wrap", "soft");
       }
       if (c.key === "recommendation") input.setAttribute("list", "recList");
-      if (isNumKey(c.key)) bindNumInput(input);
+      if (isPadKey(c.key)) bindNumInput(input);
       if (c.key === "species") {
         input.setAttribute("readonly", "readonly");
         input.setAttribute("inputmode", "none");
@@ -1198,6 +1258,9 @@ function render() {
           row.species = resolveSpeciesValue(ev.target.value);
           const shown = speciesDisplay(row.species);
           if (ev.target.value !== shown) ev.target.value = shown;
+        } else if (c.key === "condition") {
+          row.condition = formatCondition(ev.target.value);
+          if (ev.target.value !== row.condition) ev.target.value = row.condition;
         } else {
           row[c.key] = ev.target.value;
         }
@@ -1373,7 +1436,102 @@ function resolveSpeciesValue(text) {
 }
 
 function isNumKey(key) { return key === "batch" || key === "treeNo" || key === "h" || key === "s" || key === "dbh"; }
+function isConditionKey(key) { return key === "condition"; }
+function isPadKey(key) { return isNumKey(key) || isConditionKey(key); }
 function isMeasureKey(key) { return key === "h" || key === "s" || key === "dbh"; }
+
+const CONDITION_ASPECTS = [
+  { key: "health", label: "Health" },
+  { key: "structure", label: "Structure" },
+  { key: "form", label: "Form" }
+];
+const CONDITION_GRADES = [
+  { abbr: "N", name: "Normal" },
+  { abbr: "F", name: "Fair" },
+  { abbr: "P", name: "Poor" },
+  { abbr: "VP", name: "Very poor" }
+];
+function normalizeConditionGrade(s) {
+  const u = String(s || "").trim().toUpperCase().replace(/\s+/g, "").replace(/[_-]/g, "");
+  if (!u || u === "-") return "";
+  if (u === "N" || u === "NORMAL") return "N";
+  if (u === "F" || u === "FAIR") return "F";
+  if (u === "P" || u === "POOR") return "P";
+  if (u === "VP" || u === "V" || u === "VERYPOOR") return "VP";
+  return "";
+}
+function parseCondition(val) {
+  const out = { health: "", structure: "", form: "" };
+  const raw = String(val || "").trim();
+  if (!raw) return out;
+  const labeled = /health|structure|form/i.test(raw);
+  if (labeled) {
+    raw.split(/[;|，,]+/).forEach(part => {
+      const m = part.match(/\b(health|structure|form)\b\s*:?\s*(.+)$/i);
+      if (!m) return;
+      const k = m[1].toLowerCase();
+      if (out.hasOwnProperty(k)) out[k] = normalizeConditionGrade(m[2]);
+    });
+    return out;
+  }
+  raw.split(/[/|;,，]+/).map(s => s.trim()).forEach((part, i) => {
+    if (CONDITION_ASPECTS[i]) out[CONDITION_ASPECTS[i].key] = normalizeConditionGrade(part);
+  });
+  return out;
+}
+function formatCondition(val) {
+  const obj = val && typeof val === "object" && !Array.isArray(val) ? val : parseCondition(val);
+  const parts = CONDITION_ASPECTS.map(a => obj[a.key] || "");
+  if (parts.every(x => !x)) return "";
+  return parts.map(x => x || "-").join("/");
+}
+function applyConditionValue(input, obj) {
+  if (!input) return;
+  input.value = formatCondition(obj);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+function renderConditionPad() {
+  const box = document.getElementById("conditionPad");
+  if (!box) return;
+  const input = state.numTarget;
+  const cur = parseCondition(input ? input.value : "");
+  box.replaceChildren();
+  CONDITION_ASPECTS.forEach(aspect => {
+    const group = document.createElement("div");
+    group.className = "condition-group";
+    const title = document.createElement("button");
+    title.type = "button";
+    title.className = "aspect";
+    title.tabIndex = -1;
+    title.textContent = aspect.label;
+    group.appendChild(title);
+    const opts = document.createElement("div");
+    opts.className = "opts";
+    CONDITION_GRADES.forEach(g => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = g.abbr;
+      b.title = g.name;
+      b.setAttribute("aria-label", aspect.label + " " + g.name);
+      if (cur[aspect.key] === g.abbr) b.className = "on";
+      b.addEventListener("pointerdown", ev => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const next = parseCondition(input ? input.value : "");
+        next[aspect.key] = next[aspect.key] === g.abbr ? "" : g.abbr;
+        applyConditionValue(input, next);
+        renderConditionPad();
+      });
+      opts.appendChild(b);
+    });
+    group.appendChild(opts);
+    box.appendChild(group);
+  });
+}
+function clearConditionPad() {
+  applyConditionValue(state.numTarget, { health: "", structure: "", form: "" });
+  renderConditionPad();
+}
 
 function bindNumInput(input) {
   input.setAttribute("inputmode", "none");
@@ -1418,9 +1576,10 @@ const NUM_LABELS = {
   treeNo: "Tree No.",
   h: "H（高度 m）",
   s: "S（冠幅 m）",
-  dbh: "DBH（胸徑 mm）"
+  dbh: "DBH（胸徑 mm）",
+  condition: "Condition"
 };
-const NUM_ORDER = ["batch", "treeNo", "species", "h", "s", "dbh"];
+const NUM_ORDER = ["batch", "treeNo", "species", "h", "s", "dbh", "condition"];
 
 function parseTreeNo(val) {
   let rest = String(val || "");
@@ -1557,14 +1716,16 @@ function showKeypad(input) {
   document.body.classList.add("numpad-open");
   document.body.classList.toggle("mode-treeno", key === "treeNo");
   document.body.classList.toggle("mode-h", key === "h");
+  document.body.classList.toggle("mode-condition", key === "condition");
   syncPrefixButtons();
   syncHOptions();
-  renderNumpadKeys(key);
+  if (key === "condition") renderConditionPad();
+  else renderNumpadKeys(key);
   setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
   if (state.numTarget) settleMeasureField(state.numTarget);
-  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h");
+  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h", "mode-condition");
   state.numTarget = null;
   commitEditStash();
 }
@@ -1838,7 +1999,8 @@ function initNumpad() {
   });
   document.getElementById("numpadClear").addEventListener("pointerdown", ev => {
     ev.preventDefault(); ev.stopPropagation();
-    numpadPress("清空");
+    if (state.numTarget && isConditionKey(state.numTarget.dataset.key)) clearConditionPad();
+    else numpadPress("清空");
   });
   document.getElementById("numpadNext").addEventListener("pointerdown", ev => {
     ev.preventDefault(); ev.stopPropagation();
@@ -1847,7 +2009,7 @@ function initNumpad() {
   document.addEventListener("pointerdown", ev => {
     if (document.body.classList.contains("numpad-open")) {
       if (ev.target.closest("#numpad")) return;
-      if (ev.target.matches && ev.target.matches("input") && isNumKey(ev.target.dataset.key)) return;
+      if (ev.target.matches && ev.target.matches("input") && isPadKey(ev.target.dataset.key)) return;
       hideKeypad();
     }
     if (document.body.classList.contains("species-open")) {
@@ -2001,13 +2163,15 @@ function isNumeric(s) {
 }
 
 function buildSheetXml(rows) {
-  const headers = COLS.map(c => c.label).concat(["完成", "Removed", "Orange"]);
+  const extraHeaders = ["完成", "Removed", "Orange"];
+  const headers = COLS.map(c => c.label).concat(extraHeaders);
   let out = [];
   out.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
   out.push('<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">');
   out.push('<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>');
   const lastRow = Math.max(2 + rows.length, 2);
-  out.push('<dimension ref="A1:K' + lastRow + '"/>');
+  const lastCol = colLetter(headers.length - 1);
+  out.push('<dimension ref="A1:' + lastCol + lastRow + '"/>');
   out.push('<sheetViews><sheetView workbookViewId="0"/></sheetViews>');
   out.push('<sheetFormatPr defaultRowHeight="16"/>');
   out.push('<cols>');
@@ -2015,9 +2179,10 @@ function buildSheetXml(rows) {
   out.push('<col min="2" max="2" width="14" customWidth="1"/>');
   out.push('<col min="3" max="3" width="18.625" customWidth="1"/>');
   out.push('<col min="4" max="6" width="8" customWidth="1"/>');
-  out.push('<col min="7" max="7" width="19.375" customWidth="1"/>');
-  out.push('<col min="8" max="8" width="28" customWidth="1"/>');
-  out.push('<col min="9" max="11" width="10" customWidth="1"/>');
+  out.push('<col min="7" max="7" width="12" customWidth="1"/>');
+  out.push('<col min="8" max="8" width="19.375" customWidth="1"/>');
+  out.push('<col min="9" max="9" width="28" customWidth="1"/>');
+  out.push('<col min="10" max="12" width="10" customWidth="1"/>');
   out.push('</cols><sheetData>');
   out.push('<row r="1"><c r="A1" t="inlineStr" s="1"><is><t>Tree Assessment Schedule</t></is></c></row>');
   let h = '<row r="2">';
@@ -2032,6 +2197,7 @@ function buildSheetXml(rows) {
     COLS.forEach((c, i) => {
       let val = String(row[c.key] == null ? "" : row[c.key]).trim();
       if (c.key === "species") val = speciesDisplay(val);
+      if (c.key === "condition") val = formatCondition(val);
       if (val === "") return;
       const ref = colLetter(i) + r;
       if ((c.key === "h" || c.key === "s" || c.key === "dbh") && isNumeric(val)) {
@@ -2040,14 +2206,17 @@ function buildSheetXml(rows) {
         line += '<c r="' + ref + '" t="inlineStr" s="3"><is><t>' + xmlEscape(val) + '</t></is></c>';
       }
     });
+    const doneCol = colLetter(COLS.length);
+    const removedCol = colLetter(COLS.length + 1);
+    const orangeCol = colLetter(COLS.length + 2);
     if (row.done) {
-      line += '<c r="I' + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
+      line += '<c r="' + doneCol + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
     }
     if (row.removed) {
-      line += '<c r="J' + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
+      line += '<c r="' + removedCol + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
     }
     if (row.orange) {
-      line += '<c r="K' + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
+      line += '<c r="' + orangeCol + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
     }
     line += '</row>';
     out.push(line);
@@ -2237,6 +2406,7 @@ function mapImportedRows(table) {
     h: ["h", "height", "height (m)", "height(m)"],
     s: ["s", "spread", "crown spread", "crown spread (m)", "crown spread(m)"],
     dbh: ["dbh", "dbh (mm)", "dbh(mm)"],
+    condition: ["condition", "條件", "狀況", "health / structure / form", "h / s / f"],
     remarks: ["remarks", "remark", "defect", "defects"],
     recommendation: ["recommendation", "recommendations", "rec"],
     done: ["完成", "done", "completed", "complete"],
@@ -2270,6 +2440,7 @@ function mapImportedRows(table) {
       rec[c.key] = j >= 0 ? decodeEntities(String(table[i][j] == null ? "" : table[i][j])).trim() : "";
     });
     if (rec.species) rec.species = resolveSpeciesValue(rec.species);
+    if (rec.condition) rec.condition = formatCondition(rec.condition);
     if (doneIdx >= 0) {
       const raw = String(table[i][doneIdx] == null ? "" : table[i][doneIdx]).trim().toLowerCase();
       rec.done = ["y", "yes", "true", "1", "完成", "✓", "✔"].includes(raw);
