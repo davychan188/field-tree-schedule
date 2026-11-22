@@ -687,12 +687,16 @@
   .h-options button.on { background: #f5a024; color: #3a2200; border-color: #d4890f; }
   table.sheet td.h-orange { background: #f5a024; }
   table.sheet td.h-orange input { color: #3a2200; font-weight: 700; }
-  .defect-mods { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+  .defect-mods {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 0 0 8px;
+  }
   .defect-mods button {
-    flex: 1;
-    min-width: 72px;
-    min-height: 48px;
-    font-size: 16px;
+    min-height: 34px;
+    padding: 4px 6px;
+    font-size: 13px;
     font-weight: 700;
     background: #fff;
     color: var(--green-dark);
@@ -700,7 +704,6 @@
     border-radius: 8px;
   }
   .defect-mods button.on { background: var(--green); color: #fff; border-color: var(--green); }
-  .defect-tops { margin: 0 0 10px; }
   .numpad-bar button.danger-lite {
     background: #fff; color: var(--danger); border-color: #e0b4b4;
   }
@@ -830,11 +833,10 @@
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
     <p>常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead 代表 Dead tree。</p>
-    <div class="defect-mods" id="defectMods" role="group" aria-label="程度">
+    <div class="defect-mods" id="defectMods" role="group" aria-label="程度同常用備註">
       <button type="button" data-mod="Severely">Severely</button>
       <button type="button" data-mod="Large">Large</button>
     </div>
-    <div class="defect-mods defect-tops" id="defectTops" role="group" aria-label="常用備註"></div>
     <div class="defect-locs" id="defectLocs"></div>
     <div class="field"><input id="defectFilter" type="search" placeholder="搜尋其他備註"></div>
     <div class="chips" id="defectChips"></div>
@@ -863,7 +865,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "41";
+const APP_VER = "42";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -902,7 +904,7 @@ const REMARK_LOC_EXTRAS = {
   ],
   trunk: [
     { abbr: "L", name: "Leaning" },
-    { abbr: "BN", name: "Bending" },
+    { abbr: "Bending", name: "Bending" },
     { abbr: "COT", name: "Co-dominant trunks" }
   ],
   trunkBase: [
@@ -917,7 +919,7 @@ function remarkTypeName(type, phrase) {
 function remarkLocItems(loc) {
   const types = loc.skipTypes ? [] : REMARK_TYPES.filter(type => !(loc.hide || []).includes(type.abbr));
   const items = types.map(type => ({ abbr: type.abbr, name: remarkTypeName(type, loc.phrase) }));
-  return items.concat(REMARK_LOC_EXTRAS[loc.key] || []);
+  return items.concat(REMARK_LOC_EXTRAS[loc.key] || []).sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
 }
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
 const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
@@ -2633,15 +2635,16 @@ function syncRemarkMods() {
   });
 }
 function renderRemarkTopButtons(selected, input) {
-  const box = document.getElementById("defectTops");
+  const box = document.getElementById("defectMods");
   if (!box) return;
-  box.replaceChildren();
+  box.querySelectorAll("[data-remark-top]").forEach(el => el.remove());
   REMARK_TOP.forEach(item => {
     const on = remarkSelected(selected, item.name);
     const b = document.createElement("button");
     b.type = "button";
     b.className = on ? "on" : "";
     b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.dataset.remarkTop = item.name;
     b.title = item.name;
     b.setAttribute("aria-label", item.abbr + "，" + item.name);
     b.textContent = item.abbr;
