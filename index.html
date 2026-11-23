@@ -115,6 +115,11 @@
     background: #fff; color: var(--green-dark); border-color: #9cb8a8;
   }
   .view-filter button.on { background: var(--green); color: #fff; border-color: var(--green); }
+  #remarksOldBar button.danger {
+    color: var(--danger);
+    border-color: #e0b4b4;
+  }
+  #remarksOldBar button:disabled { opacity: 0.45; }
   button, .btn {
     appearance: none;
     border: 1px solid var(--green);
@@ -818,6 +823,11 @@
     <button type="button" data-mode="A" title="分位揀法：Crown、Branch、Trunk、Trunk base">A 分位</button>
     <button type="button" data-mode="B" title="英文簡寫清單，不分位置">B 簡寫</button>
   </div>
+  <div class="view-filter" id="remarksOldBar" role="group" aria-label="舊 Remarks">
+    <span class="lab">舊 Remarks</span>
+    <button type="button" id="btnKeepAllOld">全部保留</button>
+    <button type="button" class="danger" id="btnDeleteAllOld">全部刪除</button>
+  </div>
   <div class="search"><input id="q" type="search" placeholder="搜尋 Tree No.／品種／Condition／備註／建議" autocomplete="off"></div>
   <input id="file" type="file" accept=".xlsx,.xlsm,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv">
 </div>
@@ -881,6 +891,16 @@
     <div class="modal-actions">
       <button type="button" class="secondary" id="clearCancel">取消</button>
       <button type="button" class="danger" id="clearConfirm">確認清除</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="modal" id="oldDelDlg">
+  <div class="modal-body">
+    <h3>刪除全部舊 Remarks？</h3>
+    <p id="oldDelMsg">確定要刪除全部舊 Remarks（紅色）？新輸入嘅黑色備註會留低，可用「上一步」復原。</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="oldDelCancel">取消</button>
+      <button type="button" class="danger" id="oldDelConfirm">確認刪除</button>
     </div>
   </div>
 </dialog>
@@ -951,7 +971,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "49";
+const APP_VER = "50";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1224,7 +1244,7 @@ function closeTransientUi() {
   state.editStash = null;
   hideKeypad();
   hideSpeciesBar(false);
-  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg"].forEach(id => {
+  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg", "oldDelDlg"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.open) el.close();
   });
@@ -1377,6 +1397,7 @@ function render() {
   document.getElementById("pageLabel").textContent = "第 " + (state.page + 1) + " / " + pages + " 頁";
   syncFilterButtons();
   syncRemarkModeButtons();
+  syncRemarksOldBar();
   document.getElementById("btnPrev").disabled = state.page <= 0;
   document.getElementById("btnNext").disabled = false;
   const indexes = filteredIndexes();
@@ -2878,6 +2899,58 @@ function deleteOldRemarks(row) {
   afterRemarksOldChange(row);
   toast("已刪除舊 Remarks");
 }
+function oldRemarksRows() {
+  return state.rows.filter(hasOldRemarks);
+}
+function syncRemarksOldBar() {
+  const n = oldRemarksRows().length;
+  const keep = document.getElementById("btnKeepAllOld");
+  const del = document.getElementById("btnDeleteAllOld");
+  if (keep) keep.disabled = !n;
+  if (del) del.disabled = !n;
+}
+function applyKeepAllOldRemarks() {
+  const rows = oldRemarksRows();
+  if (!rows.length) { toast("而家冇舊 Remarks"); return; }
+  pushUndo("remarksOld:all-keep");
+  endUndoCoalesce();
+  rows.forEach(row => {
+    row.remarks = mergeRemarks(row.remarksOld, row.remarks);
+    row.remarksOld = "";
+    maybeAutoDone(row);
+    if (state.editStash && state.editStash.rowId === row.id && state.editStash.key === "remarks") {
+      state.editStash.original = String(row.remarks || "");
+    }
+  });
+  save();
+  const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
+  render();
+  if (dlgOpen) renderDefectPicker();
+  toast("已保留 " + rows.length + " 棵嘅舊 Remarks，而家係黑色");
+}
+function requestDeleteAllOldRemarks() {
+  const n = oldRemarksRows().length;
+  if (!n) { toast("而家冇舊 Remarks"); return; }
+  document.getElementById("oldDelMsg").textContent = "將會刪除 " + n + " 棵樹嘅舊 Remarks（紅色）。新輸入嘅黑色備註會留低。確定刪除？可用「上一步」復原。";
+  document.getElementById("oldDelDlg").showModal();
+}
+function applyDeleteAllOldRemarks() {
+  const dlg = document.getElementById("oldDelDlg");
+  if (dlg && dlg.open) dlg.close();
+  const rows = oldRemarksRows();
+  if (!rows.length) return;
+  pushUndo("remarksOld:all-delete");
+  endUndoCoalesce();
+  rows.forEach(row => {
+    row.remarksOld = "";
+    maybeAutoDone(row);
+  });
+  save();
+  const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
+  render();
+  if (dlgOpen) renderDefectPicker();
+  toast("已刪除 " + rows.length + " 棵嘅舊 Remarks");
+}
 function syncDefectOldBox() {
   const box = document.getElementById("defectOldBox");
   const txt = document.getElementById("defectOldText");
@@ -3220,6 +3293,21 @@ document.querySelectorAll("#defectMods [data-mod]").forEach(b => {
     state.remarkMod = state.remarkMod === b.dataset.mod ? "" : b.dataset.mod;
     syncRemarkMods();
   });
+});
+document.getElementById("btnKeepAllOld").addEventListener("click", ev => {
+  ev.preventDefault();
+  applyKeepAllOldRemarks();
+});
+document.getElementById("btnDeleteAllOld").addEventListener("click", ev => {
+  ev.preventDefault();
+  requestDeleteAllOldRemarks();
+});
+document.getElementById("oldDelCancel").addEventListener("click", () => {
+  document.getElementById("oldDelDlg").close();
+});
+document.getElementById("oldDelConfirm").addEventListener("click", ev => {
+  ev.preventDefault();
+  applyDeleteAllOldRemarks();
 });
 document.getElementById("defectOldKeep").addEventListener("click", ev => {
   ev.preventDefault();
