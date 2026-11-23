@@ -332,6 +332,71 @@
     outline-offset: -2px;
     background: #fffef4;
   }
+  table.sheet td.def-cell textarea[data-key="remarks"] { color: #111; }
+  table.sheet td.def-cell.has-old-remarks button.pick {
+    top: auto;
+    bottom: 6px;
+    transform: none;
+  }
+  .remarks-old {
+    color: #c62828;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.35;
+    padding: 6px 32px 4px 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .remarks-old-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 0 32px 6px 4px;
+  }
+  .remarks-old-actions button {
+    min-height: 36px;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #fff;
+    color: var(--green-dark);
+    border-color: var(--green);
+  }
+  .remarks-old-actions button.danger {
+    color: var(--danger);
+    border-color: #e0b4b4;
+    background: #fff;
+  }
+  table.sheet tbody tr.removed td .remarks-old { color: #c62828; }
+  .defect-old {
+    margin: 0 0 12px;
+    padding: 10px 10px 8px;
+    border: 1px solid #f0c7c7;
+    border-radius: 10px;
+    background: #fff6f6;
+  }
+  .defect-old .lab {
+    font-size: 13px;
+    font-weight: 700;
+    color: #c62828;
+    margin: 0 0 6px;
+  }
+  .defect-old-text {
+    color: #c62828;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0 0 8px;
+  }
+  .defect-old-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .defect-old-actions button {
+    min-height: 40px;
+    font-weight: 700;
+    background: #fff;
+    color: var(--green-dark);
+  }
   .defect-list {
     max-height: 50vh;
     overflow: auto;
@@ -845,6 +910,14 @@
   <div class="modal-body">
     <h3>選擇 Remarks</h3>
     <p id="defectHint">常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead 代表 Dead tree。</p>
+    <div class="defect-old" id="defectOldBox" hidden>
+      <div class="lab">舊資料（紅色）</div>
+      <div class="defect-old-text" id="defectOldText"></div>
+      <div class="defect-old-actions">
+        <button type="button" id="defectOldKeep">保留舊資料</button>
+        <button type="button" class="danger" id="defectOldDelete">刪除舊資料</button>
+      </div>
+    </div>
     <div class="defect-mods" id="defectMods" role="group" aria-label="程度同常用備註">
       <button type="button" data-mod="Severely">Severely</button>
       <button type="button" data-mod="Large">Large</button>
@@ -878,7 +951,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "48";
+const APP_VER = "49";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -959,10 +1032,24 @@ const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Calliste
 const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
 
 function emptyRow() {
-  return { treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", recommendation: "", done: false, removed: false, orange: false };
+  return { treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", remarksOld: "", recommendation: "", done: false, removed: false, orange: false };
 }
 function isFilled(row) {
-  return COLS.some(c => String(row[c.key] || "").trim() !== "");
+  return COLS.some(c => String(row[c.key] || "").trim() !== "") || String(row.remarksOld || "").trim() !== "";
+}
+function hasOldRemarks(row) {
+  return !!(row && String(row.remarksOld || "").trim());
+}
+function mergeRemarks(oldText, newText) {
+  const neu = parseDefects(newText);
+  const neuBases = new Set(neu.map(remarkBaseName));
+  const keptOld = parseDefects(oldText).filter(d => !neuBases.has(remarkBaseName(d)));
+  return keptOld.concat(neu).join(", ");
+}
+function remarksExportValue(row) {
+  if (!row) return "";
+  if (hasOldRemarks(row)) return mergeRemarks(row.remarksOld, row.remarks);
+  return String(row.remarks || "").trim();
 }
 function filledCount() {
   return state.rows.filter(isFilled).length;
@@ -1008,7 +1095,7 @@ function filteredIndexes() {
   state.rows.forEach((row, i) => {
     if (!rowMatchesFilter(row)) return;
     if (!q) { idx.push(i); return; }
-    const hay = COLS.map(c => row[c.key] || "").join(" ").toLowerCase();
+    const hay = (COLS.map(c => row[c.key] || "").join(" ") + " " + (row.remarksOld || "")).toLowerCase();
     const zh = zhForSci(row.species);
     if (hay.includes(q) || (zh && zh.toLowerCase().includes(q))) idx.push(i);
   });
@@ -1066,6 +1153,13 @@ function load() {
     state.rows = data.rows.map(r => {
       const row = Object.assign(emptyRow(), r, { id: r.id || uid() });
       if (!String(row.remarks || "").trim() && r.defect) row.remarks = r.defect;
+      if (!("remarksOld" in r) && String(row.remarks || "").trim()) {
+        row.remarksOld = String(row.remarks).trim();
+        row.remarks = "";
+        cleaned = true;
+      } else {
+        row.remarksOld = String(row.remarksOld || "");
+      }
       const dv = r && r.done;
       row.done = dv === true || dv === 1 || dv === "1" || String(dv).trim().toLowerCase() === "y" || String(dv).trim().toLowerCase() === "true" || String(dv).trim() === "完成";
       const rv = r && r.removed;
@@ -1326,6 +1420,7 @@ function render() {
       if (isNumKey(c.key) || isConditionKey(c.key)) td.className = "num-col";
       if (c.key === "h" && row.orange) td.className = ((td.className || "") + " h-orange").trim();
       if (c.key === "remarks" || c.key === "recommendation") td.className = "def-cell";
+      if (c.key === "remarks" && hasOldRemarks(row)) td.classList.add("has-old-remarks");
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement(c.key === "remarks" ? "textarea" : "input");
       input.value = c.key === "species" ? speciesDisplay(row.species) : (c.key === "condition" ? formatCondition(row[c.key]) : (row[c.key] || ""));
@@ -1367,6 +1462,39 @@ function render() {
         setActiveRow(row);
         beginEdit(row, c.key);
       });
+      if (c.key === "remarks" && hasOldRemarks(row)) {
+        const oldWrap = document.createElement("div");
+        oldWrap.className = "remarks-old-wrap";
+        const oldTxt = document.createElement("div");
+        oldTxt.className = "remarks-old";
+        oldTxt.textContent = row.remarksOld;
+        const oldActs = document.createElement("div");
+        oldActs.className = "remarks-old-actions";
+        const keepBtn = document.createElement("button");
+        keepBtn.type = "button";
+        keepBtn.textContent = "保留";
+        keepBtn.title = "保留舊 Remarks，轉為新資料（黑色）";
+        keepBtn.addEventListener("click", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          keepOldRemarks(row);
+        });
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.className = "danger";
+        delBtn.textContent = "刪除";
+        delBtn.title = "刪除舊 Remarks";
+        delBtn.addEventListener("click", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          deleteOldRemarks(row);
+        });
+        oldActs.appendChild(keepBtn);
+        oldActs.appendChild(delBtn);
+        oldWrap.appendChild(oldTxt);
+        oldWrap.appendChild(oldActs);
+        td.appendChild(oldWrap);
+      }
       td.appendChild(input);
       if (c.key === "species") {
         const pick = document.createElement("button");
@@ -2331,7 +2459,7 @@ function isNumeric(s) {
 }
 
 function buildSheetXml(rows) {
-  const extraHeaders = ["完成", "Removed", "Orange"];
+  const extraHeaders = ["完成", "Removed", "Orange", "Remarks (舊)"];
   const headers = COLS.map(c => c.label).concat(extraHeaders);
   let out = [];
   out.push('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>');
@@ -2350,6 +2478,7 @@ function buildSheetXml(rows) {
   out.push('<col min="7" max="7" width="19.375" customWidth="1"/>');
   out.push('<col min="8" max="8" width="28" customWidth="1"/>');
   out.push('<col min="9" max="11" width="10" customWidth="1"/>');
+  out.push('<col min="12" max="12" width="19.375" customWidth="1"/>');
   out.push('</cols><sheetData>');
   out.push('<row r="1"><c r="A1" t="inlineStr" s="1"><is><t>Tree Assessment Schedule</t></is></c></row>');
   let h = '<row r="2">';
@@ -2365,6 +2494,7 @@ function buildSheetXml(rows) {
       let val = String(row[c.key] == null ? "" : row[c.key]).trim();
       if (c.key === "species") val = speciesDisplay(val);
       if (c.key === "condition") val = formatCondition(val);
+      if (c.key === "remarks") val = remarksExportValue(row);
       if (val === "") return;
       const ref = colLetter(i) + r;
       if ((c.key === "h" || c.key === "s" || c.key === "dbh") && isNumeric(val)) {
@@ -2376,6 +2506,7 @@ function buildSheetXml(rows) {
     const doneCol = colLetter(COLS.length);
     const removedCol = colLetter(COLS.length + 1);
     const orangeCol = colLetter(COLS.length + 2);
+    const oldRemCol = colLetter(COLS.length + 3);
     if (row.done) {
       line += '<c r="' + doneCol + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
     }
@@ -2384,6 +2515,9 @@ function buildSheetXml(rows) {
     }
     if (row.orange) {
       line += '<c r="' + orangeCol + r + '" t="inlineStr" s="3"><is><t>Y</t></is></c>';
+    }
+    if (hasOldRemarks(row)) {
+      line += '<c r="' + oldRemCol + r + '" t="inlineStr" s="3"><is><t>' + xmlEscape(String(row.remarksOld).trim()) + '</t></is></c>';
     }
     line += '</row>';
     out.push(line);
@@ -2577,7 +2711,8 @@ function mapImportedRows(table) {
     recommendation: ["recommendation", "recommendations", "rec"],
     done: ["完成", "done", "completed", "complete"],
     removed: ["removed", "remove", "移除", "已移除"],
-    orange: ["orange", "橙色", "橘色"]
+    orange: ["orange", "橙色", "橘色"],
+    remarksOld: ["remarks (舊)", "remarks (old)", "old remarks", "舊備註", "舊 remarks"]
   };
   for (let i = 0; i < Math.min(table.length, 15); i++) {
     const labels = (table[i] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
@@ -2594,6 +2729,7 @@ function mapImportedRows(table) {
   const doneIdx = headers.findIndex(h => aliases.done.includes(h));
   const removedIdx = headers.findIndex(h => aliases.removed.includes(h));
   const orangeIdx = headers.findIndex(h => aliases.orange.includes(h));
+  const remarksOldIdx = headers.findIndex(h => aliases.remarksOld.includes(h));
   if (idx.treeNo < 0) {
     // fallback to positional order
     COLS.forEach((c, i) => { if (idx[c.key] < 0) idx[c.key] = i; });
@@ -2618,6 +2754,12 @@ function mapImportedRows(table) {
     if (orangeIdx >= 0) {
       const raw = String(table[i][orangeIdx] == null ? "" : table[i][orangeIdx]).trim().toLowerCase();
       rec.orange = ["y", "yes", "true", "1", "orange", "橙色", "橘色", "✓", "✔"].includes(raw);
+    }
+    if (remarksOldIdx >= 0) {
+      rec.remarksOld = decodeEntities(String(table[i][remarksOldIdx] == null ? "" : table[i][remarksOldIdx])).trim();
+    } else if (rec.remarks) {
+      rec.remarksOld = rec.remarks;
+      rec.remarks = "";
     }
     if (isFilled(rec)) out.push(rec);
   }
@@ -2707,6 +2849,48 @@ function applyImport(mode) {
 }
 
 
+function afterRemarksOldChange(row) {
+  if (state.editStash && row && state.editStash.rowId === row.id && state.editStash.key === "remarks") {
+    state.editStash.original = String(row.remarks || "");
+  }
+  const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
+  render();
+  if (dlgOpen) renderDefectPicker();
+}
+function keepOldRemarks(row) {
+  if (!hasOldRemarks(row)) return;
+  pushUndo(row.id + ":remarksOld");
+  endUndoCoalesce();
+  row.remarks = mergeRemarks(row.remarksOld, row.remarks);
+  row.remarksOld = "";
+  maybeAutoDone(row);
+  save();
+  afterRemarksOldChange(row);
+  toast("已保留舊 Remarks，而家係黑色");
+}
+function deleteOldRemarks(row) {
+  if (!hasOldRemarks(row)) return;
+  pushUndo(row.id + ":remarksOld");
+  endUndoCoalesce();
+  row.remarksOld = "";
+  maybeAutoDone(row);
+  save();
+  afterRemarksOldChange(row);
+  toast("已刪除舊 Remarks");
+}
+function syncDefectOldBox() {
+  const box = document.getElementById("defectOldBox");
+  const txt = document.getElementById("defectOldText");
+  if (!box || !txt) return;
+  const row = state.rows.find(r => r.id === state.defectTarget);
+  if (hasOldRemarks(row)) {
+    box.hidden = false;
+    txt.textContent = row.remarksOld;
+  } else {
+    box.hidden = true;
+    txt.textContent = "";
+  }
+}
 function autosizeRemarks(el) {
   if (!el) return;
   el.style.height = "auto";
@@ -2781,6 +2965,7 @@ function applyRemarkSelection(input, selected) {
 function renderDefectPicker() {
   const input = currentDefectField();
   const selected = new Set(parseDefects(input ? input.value : ""));
+  syncDefectOldBox();
   const q = document.getElementById("defectFilter").value.trim().toLowerCase();
   const chips = document.getElementById("defectChips");
   chips.replaceChildren();
@@ -3035,6 +3220,16 @@ document.querySelectorAll("#defectMods [data-mod]").forEach(b => {
     state.remarkMod = state.remarkMod === b.dataset.mod ? "" : b.dataset.mod;
     syncRemarkMods();
   });
+});
+document.getElementById("defectOldKeep").addEventListener("click", ev => {
+  ev.preventDefault();
+  const row = state.rows.find(r => r.id === state.defectTarget);
+  if (row) keepOldRemarks(row);
+});
+document.getElementById("defectOldDelete").addEventListener("click", ev => {
+  ev.preventDefault();
+  const row = state.rows.find(r => r.id === state.defectTarget);
+  if (row) deleteOldRemarks(row);
 });
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
