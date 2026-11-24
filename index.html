@@ -971,7 +971,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "50";
+const APP_VER = "51";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1861,13 +1861,6 @@ function bindNumInput(input) {
   input.setAttribute("spellcheck", "false");
   input.addEventListener("focus", () => {
     hideSpeciesBar(false);
-    const key = input.dataset.key;
-    const tr = input.closest("tr");
-    const idx = tr ? Number(tr.dataset.index) : -1;
-    if (key === "treeNo" && !String(input.value || "").trim() && state.treePrefix) {
-      input.value = formatTreeNo({ star: false, prefix: state.treePrefix, rest: "" });
-      input.dispatchEvent(new Event("input", { bubbles: true }));
-    }
     showKeypad(input);
   });
   input.addEventListener("keydown", ev => {
