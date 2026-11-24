@@ -971,7 +971,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "51";
+const APP_VER = "52";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -2717,12 +2717,12 @@ function mapImportedRows(table) {
   const aliases = {
     treeNo: ["tree no.", "tree no", "tree number", "treeno", "tree_id", "tree id"],
     species: ["species name", "species", "scientific name", "中文名", "品種", "樹種", "種名"],
-    h: ["h", "height", "height (m)", "height(m)"],
+    h: ["h", "height", "height (m)", "height(m)", "h (m)", "h(m)", "ht", "ht (m)", "ht(m)", "overall height", "overall height (m)", "overall height(m)", "tree height", "tree height (m)"],
     s: ["s", "spread", "crown spread", "crown spread (m)", "crown spread(m)"],
     dbh: ["dbh", "dbh (mm)", "dbh(mm)"],
     condition: ["condition", "條件", "狀況", "health / structure / form", "h / s / f"],
     remarks: ["remarks", "remark", "defect", "defects"],
-    recommendation: ["recommendation", "recommendations", "rec"],
+    recommendation: ["recommendation", "recommendations", "rec", "proposed mitigation measures", "proposed mitigation", "mitigation measures", "mitigation"],
     done: ["完成", "done", "completed", "complete"],
     removed: ["removed", "remove", "移除", "已移除"],
     orange: ["orange", "橙色", "橘色"],
@@ -2735,15 +2735,23 @@ function mapImportedRows(table) {
   }
   if (headerAt < 0) headerAt = table[0] && String(table[0][0] || "").includes("Tree Assessment") ? 1 : 0;
   const headers = (table[headerAt] || []).map(x => String(x || "").replace(/\s+/g, " ").trim().toLowerCase());
+  function headerKey(h) {
+    return String(h || "").replace(/[\(（][^)）]*[\)）]/g, " ").replace(/[_\-./]/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function findHeader(names) {
+    const exact = headers.findIndex(h => names.includes(h));
+    if (exact >= 0) return exact;
+    const keys = names.map(headerKey);
+    return headers.findIndex(h => keys.includes(headerKey(h)));
+  }
   const idx = {};
   COLS.forEach(c => {
-    const names = aliases[c.key];
-    idx[c.key] = headers.findIndex(h => names.includes(h));
+    idx[c.key] = findHeader(aliases[c.key]);
   });
-  const doneIdx = headers.findIndex(h => aliases.done.includes(h));
-  const removedIdx = headers.findIndex(h => aliases.removed.includes(h));
-  const orangeIdx = headers.findIndex(h => aliases.orange.includes(h));
-  const remarksOldIdx = headers.findIndex(h => aliases.remarksOld.includes(h));
+  const doneIdx = findHeader(aliases.done);
+  const removedIdx = findHeader(aliases.removed);
+  const orangeIdx = findHeader(aliases.orange);
+  const remarksOldIdx = findHeader(aliases.remarksOld);
   if (idx.treeNo < 0) {
     // fallback to positional order
     COLS.forEach((c, i) => { if (idx[c.key] < 0) idx[c.key] = i; });
