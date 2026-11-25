@@ -1076,7 +1076,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "54";
+const APP_VER = "55";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1173,7 +1173,7 @@ const REMARK_C_PROXIMITY_PARTS = [
 ];
 const REMARK_C_LOCS = [
   { abbr: "Location", title: "Location", parts: REMARK_C_LOCATION_PARTS },
-  { abbr: "IC", title: "In conflict", parts: REMARK_C_IC_PARTS },
+  { abbr: "In conflict", title: "In conflict", parts: REMARK_C_IC_PARTS },
   { abbr: "RR", title: "Restricted root", parts: REMARK_C_RR_PARTS },
   { abbr: "proximity", title: "Tree is located proximity", parts: REMARK_C_PROXIMITY_PARTS }
 ];
@@ -1197,7 +1197,8 @@ const REMARK_C_SHORTCUTS = [
   { abbr: "Uprooted", name: "Uprooted" },
   { abbr: "Dieback", name: "Dieback" },
   { abbr: "Poor taper", name: "Poor taper" },
-  { abbr: "BL", name: "Broken leader" }
+  { abbr: "BL", name: "Broken leader" },
+  { abbr: "Bending", name: "Bending" }
 ];
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
 const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Debris", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drainage channel embankment", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict building", "In conflict fencing", "In conflict hoarding", "In conflict the building", "In conflict the fencing", "In conflict the hoarding", "In conflict the wall", "In conflict wall", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root debris", "Restricted root growth", "Restricted root hoarding", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Shore", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree is located proximity to the building", "Tree is located proximity to the fencing", "Tree is located proximity to the hoarding", "Tree is located proximity to the hoarding/building", "Tree is located proximity to the wall", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
@@ -3193,6 +3194,16 @@ function applyRemarkSelection(input, selected) {
 function remarkCTypeNames(type) {
   return REMARK_C_TYPE_LOCS.map(loc => type.nameOf + loc.phrase);
 }
+function remarkCShortcutSortName(item) {
+  if (item.name) return item.name;
+  if (item.nameOf) return item.nameOf.replace(/ on $/, "");
+  return item.abbr;
+}
+function remarkCShortcutItems() {
+  return REMARK_C_SHORTCUTS.concat(REMARK_C_TYPES).slice().sort((a, b) =>
+    remarkCShortcutSortName(a).localeCompare(remarkCShortcutSortName(b), "en", { sensitivity: "base" })
+  );
+}
 function remarkCItemOn(selected, item) {
   if (item.parts) return item.parts.some(part => remarkSelected(selected, part.name));
   if (item.nameOf) return remarkCTypeNames(item).some(name => remarkSelected(selected, name));
@@ -3337,23 +3348,18 @@ function renderDefectPicker() {
       shorts.hidden = false;
       shorts.className = "defect-c-shortcuts";
       shorts.replaceChildren();
-      REMARK_C_SHORTCUTS.slice(0, 2).forEach(item => {
-        appendRemarkCButton(shorts, item, selected, input, () => {
-          toggleRemarkItem(selected, item.name);
-          applyRemarkSelection(input, selected);
-        });
-      });
-      REMARK_C_TYPES.forEach(type => {
-        appendRemarkCButton(shorts, type, selected, input, () => {
-          const options = REMARK_C_TYPE_LOCS.map(loc => ({ abbr: loc.abbr, name: type.nameOf + loc.phrase }));
-          openDefectPartPop(type.abbr, options, selected, input);
-        });
-      });
-      REMARK_C_SHORTCUTS.slice(2).forEach(item => {
-        appendRemarkCButton(shorts, item, selected, input, () => {
-          toggleRemarkItem(selected, item.name);
-          applyRemarkSelection(input, selected);
-        });
+      remarkCShortcutItems().forEach(item => {
+        if (item.nameOf) {
+          appendRemarkCButton(shorts, item, selected, input, () => {
+            const options = REMARK_C_TYPE_LOCS.map(loc => ({ abbr: loc.abbr, name: item.nameOf + loc.phrase }));
+            openDefectPartPop(item.abbr, options, selected, input);
+          });
+        } else {
+          appendRemarkCButton(shorts, item, selected, input, () => {
+            toggleRemarkItem(selected, item.name);
+            applyRemarkSelection(input, selected);
+          });
+        }
       });
     }
     if (locsBox) {
