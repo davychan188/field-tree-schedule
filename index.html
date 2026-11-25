@@ -562,7 +562,103 @@
     letter-spacing: 0.02em;
     line-height: 1.1;
   }
-  dialog.modal.defect-modal { width: min(720px, 96vw); }
+  .defect-locs.mode-c {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .defect-locs.mode-c .loc-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .defect-locs.mode-c .loc-btns button {
+    flex: 1 1 auto;
+    min-width: 96px;
+    padding: 6px 8px;
+  }
+  .defect-c-shortcuts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 14px;
+  }
+  .defect-c-shortcuts button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 auto;
+    min-width: 96px;
+    min-height: 44px;
+    padding: 6px 8px;
+    text-align: center;
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-weight: 700;
+  }
+  .defect-c-shortcuts button.on {
+    background: var(--green-soft);
+    border-color: var(--green);
+    color: var(--green-dark);
+  }
+  .defect-c-shortcuts .abbr {
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+  }
+  .defect-part-pop {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .defect-part-pop[hidden] { display: none; }
+  .defect-part-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+  }
+  .defect-part-card {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    width: min(420px, 100%);
+    box-shadow: 0 10px 28px rgba(0,0,0,.22);
+  }
+  .defect-part-card h4 {
+    margin: 0 0 10px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green-dark);
+  }
+  .defect-part-btns {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin: 0 0 12px;
+  }
+  .defect-part-btns button {
+    min-height: 48px;
+    font-weight: 700;
+    background: #fff;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .defect-part-btns button.on {
+    background: var(--green-soft);
+    border-color: var(--green);
+    color: var(--green-dark);
+  }
+  .defect-part-card .part-cancel { width: 100%; }
+  dialog.modal.defect-modal { width: min(720px, 96vw); position: relative; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   #file { display: none; }
   #numpad {
@@ -822,6 +918,7 @@
     <span class="lab">Remarks</span>
     <button type="button" data-mode="A" title="分位揀法：Crown、Branch、Trunk、Trunk base">A 分位</button>
     <button type="button" data-mode="B" title="英文簡寫清單，不分位置">B 簡寫</button>
+    <button type="button" data-mode="C" title="工地位置同快捷">C</button>
   </div>
   <div class="view-filter" id="remarksOldBar" role="group" aria-label="舊 Remarks">
     <span class="lab">舊 Remarks</span>
@@ -944,6 +1041,14 @@
     </div>
     <div class="defect-locs" id="defectLocs"></div>
     <div class="rec-grid" id="defectShortcuts" hidden></div>
+    <div class="defect-part-pop" id="defectPartPop" hidden>
+      <div class="defect-part-backdrop" id="defectPartBackdrop"></div>
+      <div class="defect-part-card" role="dialog" aria-modal="true" aria-labelledby="defectPartTitle">
+        <h4 id="defectPartTitle"></h4>
+        <div class="defect-part-btns" id="defectPartChoices"></div>
+        <button type="button" class="secondary part-cancel" id="defectPartCancel">取消</button>
+      </div>
+    </div>
     <div class="field"><input id="defectFilter" type="search" placeholder="搜尋其他備註"></div>
     <div class="chips" id="defectChips"></div>
     <div class="defect-list" id="defectChoices"></div>
@@ -971,7 +1076,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "52";
+const APP_VER = "53";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1045,8 +1150,41 @@ const REMARK_SHORTCUTS = [
   { abbr: "WOB", name: "Wound on branch" },
   { abbr: "WOT", name: "Wound on trunk" }
 ];
+const REMARK_C_LOCS = [
+  { abbr: "RR", name: "Restricted root growth" },
+  { abbr: "IC", parts: "ic" },
+  { abbr: "On slope", name: "On slope" },
+  { abbr: "drainage", name: "Drainage channel embankment" },
+  { abbr: "location proximity", name: "Tree is located proximity to the hoarding/building" },
+  { abbr: "Debris", name: "Debris" }
+];
+const REMARK_C_IC_PARTS = [
+  { abbr: "Hoarding", name: "In conflict hoarding" },
+  { abbr: "Building", name: "In conflict building" },
+  { abbr: "Fencing", name: "In conflict fencing" },
+  { abbr: "Wall", name: "In conflict wall" }
+];
+const REMARK_C_TYPES = [
+  { abbr: "Wound", nameOf: "Wound on " },
+  { abbr: "Cavity", nameOf: "Cavity on " },
+  { abbr: "ABC", nameOf: "Abnormal bark crack on " }
+];
+const REMARK_C_TYPE_LOCS = [
+  { abbr: "Branch", phrase: "branch" },
+  { abbr: "Trunk", phrase: "trunk" },
+  { abbr: "Trunk base", phrase: "trunk base" }
+];
+const REMARK_C_SHORTCUTS = [
+  { abbr: "DB", name: "Dead branch" },
+  { abbr: "BB", name: "Broken branch" },
+  { abbr: "COT", name: "Co-dominant trunks" },
+  { abbr: "L", name: "Leaning" },
+  { abbr: "SF", name: "Sparse foliage" },
+  { abbr: "ASY", name: "Asymmetric crown" },
+  { abbr: "Uprooted", name: "Uprooted" }
+];
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
-const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
+const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Debris", "Decay on branch", "Decay on roots", "Decay on trunk", "Dehydrated trunk", "Dieback", "Drainage channel embankment", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict building", "In conflict fencing", "In conflict hoarding", "In conflict wall", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root growth", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree is located proximity to the hoarding/building", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
 const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
@@ -1203,7 +1341,7 @@ function load() {
     if (typeof data.page === "number") state.page = data.page;
     if (data.treePrefix === "T" || data.treePrefix === "AT" || data.treePrefix === "TG") state.treePrefix = data.treePrefix;
     if (data.filter === "undone" || data.filter === "done" || data.filter === "star" || data.filter === "removal") state.filter = data.filter;
-    if (data.remarkMode === "A" || data.remarkMode === "B") state.remarkMode = data.remarkMode;
+    if (data.remarkMode === "A" || data.remarkMode === "B" || data.remarkMode === "C") state.remarkMode = data.remarkMode;
     if (cleaned) save();
   }
   padToPageMultiple();
@@ -3036,6 +3174,87 @@ function applyRemarkSelection(input, selected) {
   }
   renderDefectPicker();
 }
+function remarkCTypeNames(type) {
+  return REMARK_C_TYPE_LOCS.map(loc => type.nameOf + loc.phrase);
+}
+function remarkCItemOn(selected, item) {
+  if (item.parts === "ic") return REMARK_C_IC_PARTS.some(part => remarkSelected(selected, part.name));
+  if (item.nameOf) return remarkCTypeNames(item).some(name => remarkSelected(selected, name));
+  return remarkSelected(selected, item.name);
+}
+function appendRemarkCButton(box, item, selected, input, onClick) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = remarkCItemOn(selected, item) ? "on" : "";
+  b.setAttribute("aria-pressed", remarkCItemOn(selected, item) ? "true" : "false");
+  b.title = item.title || item.name || item.abbr;
+  const abbr = document.createElement("span");
+  abbr.className = "abbr";
+  abbr.textContent = item.abbr;
+  const label = item.title || item.name || item.abbr;
+  b.setAttribute("aria-label", item.abbr + "，" + label);
+  b.appendChild(abbr);
+  b.addEventListener("click", ev => {
+    ev.preventDefault();
+    onClick();
+  });
+  box.appendChild(b);
+}
+let remarkPartPending = null;
+function closeDefectPartPop() {
+  remarkPartPending = null;
+  const pop = document.getElementById("defectPartPop");
+  if (pop) pop.hidden = true;
+}
+function openDefectPartPop(title, options, selected, input) {
+  const pop = document.getElementById("defectPartPop");
+  const titleEl = document.getElementById("defectPartTitle");
+  const box = document.getElementById("defectPartChoices");
+  if (!pop || !titleEl || !box) return;
+  remarkPartPending = { title, options };
+  titleEl.textContent = title;
+  box.replaceChildren();
+  options.forEach(item => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = item.abbr;
+    b.title = item.name;
+    b.setAttribute("aria-label", item.abbr + "，" + item.name);
+    if (remarkSelected(selected, item.name)) b.classList.add("on");
+    b.addEventListener("click", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      toggleRemarkItem(selected, item.name);
+      closeDefectPartPop();
+      applyRemarkSelection(input, selected);
+    });
+    box.appendChild(b);
+  });
+  pop.hidden = false;
+}
+function initDefectPartPop() {
+  const cancel = document.getElementById("defectPartCancel");
+  const backdrop = document.getElementById("defectPartBackdrop");
+  const dlg = document.getElementById("defectDlg");
+  if (cancel) cancel.addEventListener("click", ev => {
+    ev.preventDefault();
+    closeDefectPartPop();
+  });
+  if (backdrop) backdrop.addEventListener("click", ev => {
+    ev.preventDefault();
+    closeDefectPartPop();
+  });
+  if (dlg) {
+    dlg.addEventListener("cancel", ev => {
+      const pop = document.getElementById("defectPartPop");
+      if (pop && !pop.hidden) {
+        ev.preventDefault();
+        closeDefectPartPop();
+      }
+    });
+    dlg.addEventListener("close", closeDefectPartPop);
+  }
+}
 function renderDefectPicker() {
   const input = currentDefectField();
   const selected = new Set(parseDefects(input ? input.value : ""));
@@ -3056,20 +3275,23 @@ function renderDefectPicker() {
     chips.appendChild(sp);
   });
   syncRemarkMods();
-  const modeB = state.remarkMode === "B";
+  const mode = state.remarkMode === "B" || state.remarkMode === "C" ? state.remarkMode : "A";
   const hint = document.getElementById("defectHint");
-  if (hint) hint.textContent = modeB
+  if (hint) hint.textContent = mode === "B"
     ? "常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。"
     : "常用快捷，可同時選多項。可先揀 Severely 或 Large，再加喺 defect 前面。上面 Dead 代表 Dead tree。";
   const mods = document.getElementById("defectMods");
-  if (mods) mods.setAttribute("aria-label", modeB ? "程度" : "程度同常用備註");
+  if (mods) mods.setAttribute("aria-label", mode === "B" ? "程度" : "程度同常用備註");
   const locsBox = document.getElementById("defectLocs");
   const shorts = document.getElementById("defectShortcuts");
-  if (modeB) {
+  if (locsBox) locsBox.className = mode === "C" ? "defect-locs mode-c" : "defect-locs";
+  if (mode === "B") {
+    closeDefectPartPop();
     if (mods) mods.querySelectorAll("[data-remark-top]").forEach(el => el.remove());
     if (locsBox) { locsBox.hidden = true; locsBox.replaceChildren(); }
     if (shorts) {
       shorts.hidden = false;
+      shorts.className = "rec-grid";
       shorts.replaceChildren();
       REMARK_SHORTCUTS.forEach(item => {
         const on = remarkSelected(selected, item.name);
@@ -3094,40 +3316,91 @@ function renderDefectPicker() {
         shorts.appendChild(b);
       });
     }
+  } else if (mode === "C") {
+    if (shorts) {
+      shorts.hidden = false;
+      shorts.className = "defect-c-shortcuts";
+      shorts.replaceChildren();
+      REMARK_C_SHORTCUTS.slice(0, 2).forEach(item => {
+        appendRemarkCButton(shorts, item, selected, input, () => {
+          toggleRemarkItem(selected, item.name);
+          applyRemarkSelection(input, selected);
+        });
+      });
+      REMARK_C_TYPES.forEach(type => {
+        appendRemarkCButton(shorts, type, selected, input, () => {
+          const options = REMARK_C_TYPE_LOCS.map(loc => ({ abbr: loc.abbr, name: type.nameOf + loc.phrase }));
+          openDefectPartPop(type.abbr, options, selected, input);
+        });
+      });
+      REMARK_C_SHORTCUTS.slice(2).forEach(item => {
+        appendRemarkCButton(shorts, item, selected, input, () => {
+          toggleRemarkItem(selected, item.name);
+          applyRemarkSelection(input, selected);
+        });
+      });
+    }
+    if (locsBox) {
+      locsBox.hidden = false;
+      renderRemarkTopButtons(selected, input);
+      locsBox.replaceChildren();
+      const col = document.createElement("div");
+      col.className = "defect-loc";
+      const h = document.createElement("h4");
+      h.textContent = "Location";
+      col.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "loc-btns";
+      REMARK_C_LOCS.forEach(item => {
+        if (item.parts === "ic") {
+          appendRemarkCButton(grid, { abbr: item.abbr, title: "In conflict", parts: "ic" }, selected, input, () => {
+            openDefectPartPop("IC", REMARK_C_IC_PARTS, selected, input);
+          });
+        } else {
+          appendRemarkCButton(grid, item, selected, input, () => {
+            toggleRemarkItem(selected, item.name);
+            applyRemarkSelection(input, selected);
+          });
+        }
+      });
+      col.appendChild(grid);
+      locsBox.appendChild(col);
+    }
   } else {
-    if (shorts) { shorts.hidden = true; shorts.replaceChildren(); }
+    closeDefectPartPop();
+    if (shorts) { shorts.hidden = true; shorts.className = "rec-grid"; shorts.replaceChildren(); }
     if (locsBox) locsBox.hidden = false;
     renderRemarkTopButtons(selected, input);
     locsBox.replaceChildren();
-  REMARK_LOCS.forEach(loc => {
-    const col = document.createElement("div");
-    col.className = "defect-loc";
-    const h = document.createElement("h4");
-    h.textContent = loc.label;
-    col.appendChild(h);
-    const grid = document.createElement("div");
-    grid.className = "loc-btns";
-    remarkLocItems(loc).forEach(item => {
-      const on = remarkSelected(selected, item.name);
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = on ? "on" : "";
-      b.setAttribute("aria-pressed", on ? "true" : "false");
-      b.title = item.name;
-      const abbr = document.createElement("span");
-      abbr.className = "abbr";
-      abbr.textContent = item.abbr;
-      b.setAttribute("aria-label", item.abbr + "，" + item.name);
-      b.appendChild(abbr);
-      b.addEventListener("click", () => {
-        toggleRemarkItem(selected, item.name);
-        applyRemarkSelection(input, selected);
+    REMARK_LOCS.forEach(loc => {
+      const col = document.createElement("div");
+      col.className = "defect-loc";
+      const h = document.createElement("h4");
+      h.textContent = loc.label;
+      col.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "loc-btns";
+      remarkLocItems(loc).forEach(item => {
+        const on = remarkSelected(selected, item.name);
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = on ? "on" : "";
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        b.title = item.name;
+        const abbr = document.createElement("span");
+        abbr.className = "abbr";
+        abbr.textContent = item.abbr;
+        b.setAttribute("aria-label", item.abbr + "，" + item.name);
+        b.appendChild(abbr);
+        b.addEventListener("click", () => {
+          toggleRemarkItem(selected, item.name);
+          applyRemarkSelection(input, selected);
+        });
+        grid.appendChild(b);
       });
-      grid.appendChild(b);
+      col.appendChild(grid);
+      locsBox.appendChild(col);
     });
-    col.appendChild(grid);
-    locsBox.appendChild(col);
-  });
   }
   const box = document.getElementById("defectChoices");
   box.replaceChildren();
@@ -3154,6 +3427,8 @@ function renderDefectPicker() {
     }
   }
 }
+
+
 function initDefectList() {
   const dl = document.getElementById("defectList");
   DEFECTS.forEach(d => {
@@ -3386,16 +3661,20 @@ function initViewFilter() {
   });
   syncFilterButtons();
 }
+function allowedRemarkMode(mode) {
+  return mode === "B" || mode === "C" ? mode : "A";
+}
 function syncRemarkModeButtons() {
-  const cur = state.remarkMode === "B" ? "B" : "A";
+  const cur = allowedRemarkMode(state.remarkMode);
   document.querySelectorAll("#remarkModeBar button").forEach(b => {
     b.classList.toggle("on", b.dataset.mode === cur);
   });
 }
 function setRemarkMode(next) {
-  next = next === "B" ? "B" : "A";
+  next = allowedRemarkMode(next);
   if (state.remarkMode === next) return;
   state.remarkMode = next;
+  closeDefectPartPop();
   save();
   syncRemarkModeButtons();
   if (document.getElementById("defectDlg").open) renderDefectPicker();
@@ -3422,6 +3701,7 @@ load();
 initBulkPrefix();
 initViewFilter();
 initRemarkMode();
+initDefectPartPop();
 render();
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(function(){});
