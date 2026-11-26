@@ -634,7 +634,13 @@
     color: var(--green-dark);
   }
   .defect-part-card .part-cancel { width: 100%; }
-  dialog.modal.defect-modal { width: min(720px, 96vw); position: relative; }
+  dialog.modal.defect-modal {
+    width: min(720px, 96vw);
+    position: relative;
+    max-height: min(92dvh, 920px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
   #file { display: none; }
   #numpad {
@@ -1048,7 +1054,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "59";
+const APP_VER = "60";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -3170,10 +3176,26 @@ function renderRemarkTopButtons(selected, input) {
 function applyRemarkSelection(input, selected) {
   if (input) {
     input.value = [...selected].join(", ");
-    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
     autosizeRemarks(input);
   }
   renderDefectPicker();
+}
+function bindSearchRemarkPick(el, fn) {
+  let handled = false;
+  el.addEventListener("pointerdown", ev => {
+    if (ev.button) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    handled = true;
+    fn();
+  });
+  el.addEventListener("click", ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (handled) { handled = false; return; }
+    fn();
+  });
 }
 function remarkCItemOn(selected, item) {
   if (item.parts) return item.parts.some(part => remarkSelected(selected, part.name));
@@ -3413,7 +3435,7 @@ function renderDefectPicker() {
         b.type = "button";
         b.textContent = d;
         if (remarkSelected(selected, d)) b.className = "on";
-        b.addEventListener("click", () => {
+        bindSearchRemarkPick(b, () => {
           toggleRemarkItem(selected, d);
           applyRemarkSelection(input, selected);
         });
