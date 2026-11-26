@@ -43,6 +43,12 @@
     color: #fff;
     padding: calc(8px + var(--safe-top)) 12px 8px;
   }
+  header.app .title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
   header.app h1 { margin: 0; font-size: 17px; font-weight: 700; }
   header.app .sub { margin: 2px 0 0; font-size: 11px; opacity: .88; }
   header.app .meta {
@@ -778,24 +784,19 @@
   }
   .field input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
   .app-ver-mark {
-    position: fixed;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 15;
-    padding: 7px 6px 7px calc(6px + env(safe-area-inset-left, 0px));
-    border-radius: 0 8px 8px 0;
-    background: var(--green);
-    color: #fff;
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.04em;
     line-height: 1;
+    color: #fff;
+    background: rgba(255,255,255,.18);
+    padding: 3px 8px;
+    border-radius: 999px;
     pointer-events: none;
     user-select: none;
     -webkit-user-select: none;
     opacity: 0.92;
-    box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    flex: 0 0 auto;
   }
   @media print {
     header.app .meta, .toolbar, .bulk-prefix, #numpad, #speciesBar, td.act, th.act, button, .search, .app-ver-mark { display: none !important; }
@@ -910,9 +911,11 @@
 </style>
 </head>
 <body>
-<div id="appVerMark" class="app-ver-mark" role="status" aria-live="off"></div>
 <header class="app">
-  <h1>Tree Assessment Schedule</h1>
+  <div class="title-row">
+    <h1>Tree Assessment Schedule</h1>
+    <span id="appVerMark" class="app-ver-mark" role="status" aria-live="off"></span>
+  </div>
   <p class="sub">離線記錄 · 每頁 10 項 · Tree No.／尺寸用九宮格 · 品種可打字、手寫或搜尋 TMO 清單</p>
   <div class="meta">
     <label class="job">工程／檔名 <input id="job" type="text" placeholder="可選，用於匯出檔名" autocomplete="off"></label>
@@ -1120,7 +1123,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "62";
+const APP_VER = "63";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },

@@ -2,7 +2,7 @@
 
 離線記錄場地樹木評估表（Tree No.、Species Name、H、S、DBH、Condition、Remarks、Recommendation），並匯出 Excel。資料只在你的瀏覽器處理，不會上載到伺服器。
 
-開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=62)
+開啟：[https://davychan188.github.io/field-tree-schedule/](https://davychan188.github.io/field-tree-schedule/?v=63)
 
 ## iPad mini + Apple Pencil 建議用法
 
