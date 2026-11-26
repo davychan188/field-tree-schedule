@@ -1079,7 +1079,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "57";
+const APP_VER = "58";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -2108,14 +2108,18 @@ function syncBulkPrefixButtons() {
     b.classList.toggle("on", b.dataset.prefix === state.treePrefix);
   });
 }
+function treeNoSerial(val) {
+  const p = parseTreeNo(val);
+  const m = String(p.rest || "").trim().match(/^(\d+)$/);
+  return m ? { n: Number(m[1]), width: m[1].length } : null;
+}
 function lastTreeSerial() {
   let last = 0, width = 1;
   state.rows.forEach(row => {
-    const p = parseTreeNo(row.treeNo);
-    const m = String(p.rest || "").trim().match(/^(\d+)$/);
-    if (m) {
-      last = Number(m[1]);
-      width = Math.max(width, m[1].length);
+    const s = treeNoSerial(row.treeNo);
+    if (s) {
+      last = s.n;
+      width = Math.max(width, s.width);
     }
   });
   return { last, width };
@@ -2125,19 +2129,37 @@ function currentPageIndexes() {
   const start = state.page * PAGE_SIZE;
   return indexes.slice(start, start + PAGE_SIZE);
 }
+function bulkFillAnchorIndex(pageIdx) {
+  let row = currentActiveRow();
+  if (!row && state.numTarget && state.numTarget.closest) {
+    const tr = state.numTarget.closest("tr");
+    const id = tr && tr.dataset.id;
+    if (id) row = state.rows.find(r => r.id === id) || null;
+  }
+  if (!row || !treeNoSerial(row.treeNo)) return -1;
+  const idx = state.rows.findIndex(r => r.id === row.id);
+  return idx >= 0 && pageIdx.includes(idx) ? idx : -1;
+}
 function applyBulkTreePrefix(prefix) {
   const pageIdx = currentPageIndexes();
-  const willFill = pageIdx.some(i => !String(state.rows[i].treeNo || "").trim());
-  if (willFill || state.treePrefix !== prefix) {
+  const startBelowSelected = bulkFillAnchorIndex(pageIdx);
+  const emptyOnPage = i => !String(state.rows[i].treeNo || "").trim();
+  const targets = pageIdx.filter(i => emptyOnPage(i) && (startBelowSelected < 0 || i > startBelowSelected));
+  if (targets.length || state.treePrefix !== prefix) {
     pushUndo("bulk");
     endUndoCoalesce();
   }
   state.treePrefix = prefix;
-  const { last, width } = lastTreeSerial();
-  let n = last;
+  const global = lastTreeSerial();
+  let n = global.last;
+  let width = global.width;
+  if (startBelowSelected >= 0) {
+    const selected = treeNoSerial(state.rows[startBelowSelected].treeNo);
+    n = selected.n;
+    width = Math.max(width, selected.width);
+  }
   let first = null, end = null, count = 0;
-  pageIdx.forEach(i => {
-    if (String(state.rows[i].treeNo || "").trim()) return;
+  targets.forEach(i => {
     n += 1;
     const rest = String(n).padStart(width, "0");
     state.rows[i].treeNo = formatTreeNo({ star: false, prefix: prefix, rest: rest });
@@ -2151,8 +2173,9 @@ function applyBulkTreePrefix(prefix) {
   if (count) {
     const a = formatTreeNo({ star: false, prefix: prefix, rest: first });
     const b = formatTreeNo({ star: false, prefix: prefix, rest: end });
-    toast("已按順序填入本頁 " + count + " 個：" + a + (count > 1 ? "–" + b : "") + "。已有編號嘅唔會改");
-  }
+    const origin = startBelowSelected >= 0 ? "已由選中編號下面開始，填入本頁 " : "已按順序填入本頁 ";
+    toast(origin + count + " 個：" + a + (count > 1 ? "–" + b : "") + "。已有編號嘅唔會改");
+  } else if (startBelowSelected >= 0) toast("選中編號下面冇空白 Tree No. 可填，上面嘅空白同已有編號都唔會改");
   else toast("本頁 Tree No. 都已有編號，冇改動");
 }
 function initBulkPrefix() {
