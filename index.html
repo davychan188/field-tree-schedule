@@ -623,7 +623,9 @@
   .defect-c-shortcuts .abbr {
     font-size: 15px;
     letter-spacing: 0.02em;
-    line-height: 1.1;
+    line-height: 1.15;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
   .defect-part-pop {
     position: absolute;
@@ -1123,7 +1125,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "63";
+const APP_VER = "64";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1226,7 +1228,7 @@ const REMARK_C_LOCS = [
 ];
 const REMARK_C_HEALTH = [
   { abbr: "Dieback", name: "Dieback" },
-  { abbr: "SF", name: "Sparse foliage" },
+  { abbr: "Sparse foliage", name: "Sparse foliage" },
   { abbr: "Wilting", name: "Wilting" }
 ];
 const REMARK_C_DEAD_PARTS = [
@@ -1267,7 +1269,7 @@ const REMARK_C_STRUCTURE = [
 ];
 const REMARK_C_FORM = [
   { abbr: "ASY", name: "Asymmetric crown" },
-  { abbr: "L", name: "Leaning" },
+  { abbr: "Leaning", name: "Leaning" },
   { abbr: "OXB", name: "Overextended branch" },
   { abbr: "Bending", name: "Bending" },
   { abbr: "Suppressed", name: "Suppressed by adjacent trees" }
