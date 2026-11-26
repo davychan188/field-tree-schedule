@@ -352,26 +352,6 @@
     white-space: pre-wrap;
     word-break: break-word;
   }
-  .remarks-old-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    padding: 0 32px 6px 4px;
-  }
-  .remarks-old-actions button {
-    min-height: 36px;
-    padding: 4px 10px;
-    font-size: 13px;
-    font-weight: 700;
-    background: #fff;
-    color: var(--green-dark);
-    border-color: var(--green);
-  }
-  .remarks-old-actions button.danger {
-    color: var(--danger);
-    border-color: #e0b4b4;
-    background: #fff;
-  }
   table.sheet tbody tr.removed td .remarks-old { color: #c62828; }
   .defect-old {
     margin: 0 0 12px;
@@ -393,14 +373,7 @@
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
-    margin: 0 0 8px;
-  }
-  .defect-old-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .defect-old-actions button {
-    min-height: 40px;
-    font-weight: 700;
-    background: #fff;
-    color: var(--green-dark);
+    margin: 0;
   }
   .defect-list {
     max-height: 50vh;
@@ -919,8 +892,8 @@
   </div>
   <div class="view-filter" id="remarkModeBar" role="group" aria-label="Remarks 模式">
     <span class="lab">Remarks</span>
-    <button type="button" data-mode="A" title="分位揀法：Crown、Branch、Trunk、Trunk base">A 分位</button>
-    <button type="button" data-mode="B" title="英文簡寫清單，不分位置">B 簡寫</button>
+    <button type="button" data-mode="A" title="分位揀法：Crown、Branch、Trunk、Trunk base">A</button>
+    <button type="button" data-mode="B" title="英文簡寫清單，不分位置">B</button>
     <button type="button" data-mode="C" title="工地位置同快捷">C</button>
   </div>
   <div class="view-filter" id="remarksOldBar" role="group" aria-label="舊 Remarks">
@@ -1033,10 +1006,6 @@
     <div class="defect-old" id="defectOldBox" hidden>
       <div class="lab">舊資料（紅色）</div>
       <div class="defect-old-text" id="defectOldText"></div>
-      <div class="defect-old-actions">
-        <button type="button" id="defectOldKeep">保留舊資料</button>
-        <button type="button" class="danger" id="defectOldDelete">刪除舊資料</button>
-      </div>
     </div>
     <div class="defect-mods" id="defectMods" role="group" aria-label="程度同常用備註">
       <button type="button" data-mod="Severely">Severely</button>
@@ -1079,7 +1048,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "58";
+const APP_VER = "59";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1679,31 +1648,7 @@ function render() {
         const oldTxt = document.createElement("div");
         oldTxt.className = "remarks-old";
         oldTxt.textContent = row.remarksOld;
-        const oldActs = document.createElement("div");
-        oldActs.className = "remarks-old-actions";
-        const keepBtn = document.createElement("button");
-        keepBtn.type = "button";
-        keepBtn.textContent = "保留";
-        keepBtn.title = "保留舊 Remarks，轉為新資料（黑色）";
-        keepBtn.addEventListener("click", ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          keepOldRemarks(row);
-        });
-        const delBtn = document.createElement("button");
-        delBtn.type = "button";
-        delBtn.className = "danger";
-        delBtn.textContent = "刪除";
-        delBtn.title = "刪除舊 Remarks";
-        delBtn.addEventListener("click", ev => {
-          ev.preventDefault();
-          ev.stopPropagation();
-          deleteOldRemarks(row);
-        });
-        oldActs.appendChild(keepBtn);
-        oldActs.appendChild(delBtn);
         oldWrap.appendChild(oldTxt);
-        oldWrap.appendChild(oldActs);
         td.appendChild(oldWrap);
       }
       td.appendChild(input);
@@ -3094,35 +3039,6 @@ function applyImport(mode) {
 }
 
 
-function afterRemarksOldChange(row) {
-  if (state.editStash && row && state.editStash.rowId === row.id && state.editStash.key === "remarks") {
-    state.editStash.original = String(row.remarks || "");
-  }
-  const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
-  render();
-  if (dlgOpen) renderDefectPicker();
-}
-function keepOldRemarks(row) {
-  if (!hasOldRemarks(row)) return;
-  pushUndo(row.id + ":remarksOld");
-  endUndoCoalesce();
-  row.remarks = mergeRemarks(row.remarksOld, row.remarks);
-  row.remarksOld = "";
-  maybeAutoDone(row);
-  save();
-  afterRemarksOldChange(row);
-  toast("已保留舊 Remarks，而家係黑色");
-}
-function deleteOldRemarks(row) {
-  if (!hasOldRemarks(row)) return;
-  pushUndo(row.id + ":remarksOld");
-  endUndoCoalesce();
-  row.remarksOld = "";
-  maybeAutoDone(row);
-  save();
-  afterRemarksOldChange(row);
-  toast("已刪除舊 Remarks");
-}
 function oldRemarksRows() {
   return state.rows.filter(hasOldRemarks);
 }
@@ -3663,16 +3579,6 @@ document.getElementById("oldDelCancel").addEventListener("click", () => {
 document.getElementById("oldDelConfirm").addEventListener("click", ev => {
   ev.preventDefault();
   applyDeleteAllOldRemarks();
-});
-document.getElementById("defectOldKeep").addEventListener("click", ev => {
-  ev.preventDefault();
-  const row = state.rows.find(r => r.id === state.defectTarget);
-  if (row) keepOldRemarks(row);
-});
-document.getElementById("defectOldDelete").addEventListener("click", ev => {
-  ev.preventDefault();
-  const row = state.rows.find(r => r.id === state.defectTarget);
-  if (row) deleteOldRemarks(row);
 });
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
