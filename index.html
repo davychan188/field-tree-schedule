@@ -224,6 +224,41 @@
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  table.sheet td.num.locked { position: relative; }
+  table.sheet td.num .lock-mark {
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    width: 8px;
+    height: 9px;
+    margin-left: -4px;
+    pointer-events: none;
+    opacity: 0.95;
+  }
+  table.sheet td.num .lock-mark::before {
+    content: "";
+    position: absolute;
+    left: 1.5px;
+    top: 0;
+    width: 5px;
+    height: 4px;
+    border: 1.2px solid currentColor;
+    border-bottom: 0;
+    border-radius: 3px 3px 0 0;
+    box-sizing: border-box;
+  }
+  table.sheet td.num .lock-mark::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    width: 8px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  table.sheet tbody tr.locked td input,
+  table.sheet tbody tr.locked td textarea { cursor: default; }
   table.sheet td.act { text-align: center; padding: 2px; background: #f7faf8; }
   table.sheet td input {
     width: 100%;
@@ -987,7 +1022,7 @@
 <dialog class="modal" id="clearDlg">
   <div class="modal-body">
     <h3>清除全部記錄？</h3>
-    <p id="clearMsg">確定要清除而家全部記錄？此操作會刪除表內所有已填資料。</p>
+    <p id="clearMsg">確定要清除未完成記錄？已完成並鎖定的資料會保留。</p>
     <div class="modal-actions">
       <button type="button" class="secondary" id="clearCancel">取消</button>
       <button type="button" class="danger" id="clearConfirm">確認清除</button>
@@ -1001,6 +1036,16 @@
     <div class="modal-actions">
       <button type="button" class="secondary" id="oldDelCancel">取消</button>
       <button type="button" class="danger" id="oldDelConfirm">確認刪除</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="modal" id="unlockDlg">
+  <div class="modal-body">
+    <h3>解鎖已完成資料？</h3>
+    <p id="unlockMsg">此行已完成並鎖定，以免不小心改動或刪除資料。確定解鎖後，才可以編輯或清除此行。</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="unlockCancel">取消</button>
+      <button type="button" id="unlockConfirm">確定解鎖</button>
     </div>
   </div>
 </dialog>
@@ -1075,7 +1120,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "61";
+const APP_VER = "62";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1233,7 +1278,7 @@ const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Cr
 const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Debris", "Decay on branch", "Decay on roots", "Decay on trunk", "Decaying branch", "Decaying trunk", "Decaying trunk base", "Dehydrated trunk", "Dieback", "Drainage channel embankment", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling root", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict building", "In conflict fencing", "In conflict hoarding", "In conflict the building", "In conflict the fencing", "In conflict the hoarding", "In conflict the wall", "In conflict wall", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root debris", "Restricted root growth", "Restricted root hoarding", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Shore", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suppressed by adjacent trees", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree is located proximity to the building", "Tree is located proximity to the fencing", "Tree is located proximity to the hoarding", "Tree is located proximity to the hoarding/building", "Tree is located proximity to the wall", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
-const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
+const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, workRowId: null, pendingUnlockId: null, unlockCloseLock: false, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
 
 function emptyRow() {
   return { treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", remarksOld: "", recommendation: "", done: false, removed: false, orange: false };
@@ -1312,6 +1357,27 @@ function isIncomplete(row) {
 }
 function isComplete(row) {
   return isFilled(row) && (!!row.done || !!row.removed);
+}
+function isRowCompleted(row) {
+  return !!(row && (row.done || row.removed));
+}
+function isRowLocked(row) {
+  return isRowCompleted(row) && row.id !== state.workRowId;
+}
+function setWorkRow(row) {
+  state.workRowId = row && row.id ? row.id : null;
+}
+function toastLocked() {
+  toast("此行已完成並鎖定，請先按列號解鎖");
+}
+function rejectLocked(row) {
+  if (!isRowLocked(row)) return false;
+  toastLocked();
+  return true;
+}
+function rowFromInput(input) {
+  const tr = input && input.closest && input.closest("tr");
+  return tr ? (state.rows.find(r => r.id === tr.dataset.id) || null) : null;
 }
 function isStarred(row) {
   return !!(row && parseTreeNo(row.treeNo).star);
@@ -1430,7 +1496,7 @@ function closeTransientUi() {
   state.editStash = null;
   hideKeypad();
   hideSpeciesBar(false);
-  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg", "oldDelDlg"].forEach(id => {
+  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg", "oldDelDlg", "unlockDlg"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.open) el.close();
   });
@@ -1452,6 +1518,7 @@ function pushUndo(key) {
 function undo() {
   if (!undoStack.length || restoring) return;
   closeTransientUi();
+  state.workRowId = null;
   endUndoCoalesce();
   restoring = true;
   redoStack.push(snapshotData());
@@ -1467,6 +1534,7 @@ function undo() {
 function redo() {
   if (!redoStack.length || restoring) return;
   closeTransientUi();
+  state.workRowId = null;
   endUndoCoalesce();
   restoring = true;
   undoStack.push(snapshotData());
@@ -1507,6 +1575,8 @@ function maybeAutoDone(row) {
 }
 function beginEdit(row, key) {
   if (restoring || !row || !key) return;
+  if (isRowLocked(row)) return;
+  setWorkRow(row);
   if (state.editStash && state.editStash.rowId === row.id && state.editStash.key === key) return;
   commitEditStash();
   const original = key === "species" ? row.species : String(row[key] || "");
@@ -1537,6 +1607,7 @@ function currentActiveRow() {
   return state.rows.find(r => r.id === id) || null;
 }
 function setActiveRow(row) {
+  if (!row || row.id !== state.workRowId) state.workRowId = null;
   state.activeRowId = row && row.id ? row.id : null;
   document.querySelectorAll("table.sheet tbody tr").forEach(r => {
     r.classList.toggle("active", !!state.activeRowId && r.dataset.id === state.activeRowId);
@@ -1552,23 +1623,72 @@ function syncMarkDoneButton() {
 function markSelectedRowDone() {
   const row = currentActiveRow();
   if (!row) { toast("請先點選其中一格"); return; }
-  if (row.done) { toast("呢行已經完成"); return; }
+  if (isRowLocked(row) || row.done) { toast("呢行已經完成"); return; }
   hideKeypad();
   hideSpeciesBar(true);
   pushUndo();
   endUndoCoalesce();
   row.done = true;
+  setWorkRow(row);
   save();
   render();
   toast("已標記完成");
 }
+function requestUnlockRow(row) {
+  if (!row || !isRowLocked(row) || state.unlockCloseLock) return;
+  hideKeypad();
+  hideSpeciesBar(true);
+  state.pendingUnlockId = row.id;
+  const label = String(row.treeNo || "").trim();
+  const msg = document.getElementById("unlockMsg");
+  if (msg) {
+    msg.textContent = (label ? ("「" + label + "」") : "此行") + "已完成並鎖定，以免不小心改動或刪除資料。確定解鎖後，才可以編輯或清除此行。";
+  }
+  document.getElementById("unlockDlg").showModal();
+}
+function cancelUnlockRow() {
+  const dlg = document.getElementById("unlockDlg");
+  state.pendingUnlockId = null;
+  armUnlockCloseLock();
+  if (dlg && dlg.open) dlg.close();
+}
+function applyUnlockRow() {
+  const dlg = document.getElementById("unlockDlg");
+  const row = state.rows.find(r => r.id === state.pendingUnlockId);
+  state.pendingUnlockId = null;
+  armUnlockCloseLock();
+  if (dlg && dlg.open) dlg.close();
+  if (!row || !isRowLocked(row)) return;
+  hideKeypad();
+  hideSpeciesBar(true);
+  pushUndo("unlock:" + row.id);
+  endUndoCoalesce();
+  row.done = false;
+  row.removed = false;
+  setWorkRow(row);
+  state.activeRowId = row.id;
+  save();
+  render();
+  toast("已解鎖，現可編輯此行");
+}
+function armUnlockCloseLock() {
+  state.unlockCloseLock = true;
+  clearTimeout(armUnlockCloseLock._t);
+  armUnlockCloseLock._t = setTimeout(() => { state.unlockCloseLock = false; }, 400);
+}
 function toggleRowDone(row) {
-  if (!row) return;
+  if (!row || state.unlockCloseLock) return;
+  if (isRowLocked(row)) {
+    requestUnlockRow(row);
+    return;
+  }
   hideKeypad();
   hideSpeciesBar(true);
   pushUndo();
   endUndoCoalesce();
   row.done = !row.done;
+  if (row.done) setWorkRow(row);
+  else if (state.workRowId === row.id) state.workRowId = null;
   save();
   render();
 }
@@ -1601,15 +1721,24 @@ function render() {
     tr.dataset.index = String(rowIndex);
     if (row.done) tr.classList.add("done");
     if (row.removed) tr.classList.add("removed");
+    if (isRowLocked(row)) tr.classList.add("locked");
     if (state.activeRowId && row.id === state.activeRowId) tr.classList.add("active");
     if (state.searchHits && state.searchHits.has(row.id)) tr.classList.add("search-hit");
     const num = document.createElement("td");
-    num.className = "num" + (row.done ? " done" : "");
+    const locked = isRowLocked(row);
+    num.className = "num" + (row.done ? " done" : "") + (locked ? " locked" : "");
     num.textContent = String(rowIndex + 1);
+    if (locked) {
+      const mark = document.createElement("span");
+      mark.className = "lock-mark";
+      mark.setAttribute("aria-hidden", "true");
+      num.appendChild(mark);
+    }
     num.tabIndex = 0;
     num.setAttribute("role", "button");
     num.setAttribute("aria-pressed", row.done ? "true" : "false");
-    num.title = row.done ? "取消完成" : "標記完成";
+    num.title = locked ? "已完成並鎖定，點擊可解鎖" : (row.done ? "取消完成" : "標記完成");
+    num.setAttribute("aria-label", locked ? ("第 " + (rowIndex + 1) + " 行，已完成並鎖定，點擊可解鎖") : ("第 " + (rowIndex + 1) + " 行，" + (row.done ? "取消完成" : "標記完成")));
     num.addEventListener("click", ev => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -1638,18 +1767,28 @@ function render() {
         input.setAttribute("wrap", "soft");
       }
       if (c.key === "recommendation") input.setAttribute("list", "recList");
+      if (locked) {
+        input.setAttribute("readonly", "readonly");
+        input.setAttribute("aria-readonly", "true");
+        input.tabIndex = -1;
+      }
       if (isNumKey(c.key)) bindNumInput(input);
       if (c.key === "species") {
         input.setAttribute("readonly", "readonly");
         input.setAttribute("inputmode", "none");
         input.addEventListener("focus", () => {
+          if (rejectLocked(row)) { input.blur(); return; }
           hideKeypad();
           setActiveRow(row);
           openSpeciesBar(row.id, input);
         });
-        input.addEventListener("click", () => openSpeciesBar(row.id, input));
+        input.addEventListener("click", () => {
+          if (rejectLocked(row)) return;
+          openSpeciesBar(row.id, input);
+        });
       }
       input.addEventListener("input", ev => {
+        if (isRowLocked(row)) return;
         pushUndo(row.id + ":" + c.key);
         if (c.key === "species") {
           row.species = resolveSpeciesValue(ev.target.value);
@@ -1665,7 +1804,12 @@ function render() {
         save();
         updateCountAndLists();
       });
-      input.addEventListener("focus", () => {
+      input.addEventListener("focus", ev => {
+        if (isRowLocked(row)) {
+          ev.target.blur();
+          toastLocked();
+          return;
+        }
         setActiveRow(row);
         beginEdit(row, c.key);
       });
@@ -1687,6 +1831,7 @@ function render() {
         pick.title = "搜尋或手寫品種";
         pick.addEventListener("click", ev => {
           ev.preventDefault(); ev.stopPropagation();
+          if (rejectLocked(row)) return;
           hideKeypad();
           openSpeciesBar(row.id, input);
         });
@@ -1701,6 +1846,7 @@ function render() {
         pick.addEventListener("click", ev => {
           ev.preventDefault();
           ev.stopPropagation();
+          if (rejectLocked(row)) return;
           hideKeypad();
           hideSpeciesBar(true);
           setActiveRow(row);
@@ -1722,6 +1868,7 @@ function render() {
         pick.addEventListener("click", ev => {
           ev.preventDefault();
           ev.stopPropagation();
+          if (rejectLocked(row)) return;
           hideKeypad();
           hideSpeciesBar(true);
           setActiveRow(row);
@@ -1739,11 +1886,13 @@ function render() {
         input.addEventListener("focus", ev => {
           ev.preventDefault();
           if (state.conditionFocusLock) return;
+          if (rejectLocked(row)) { input.blur(); return; }
           openConditionDlg(row, input);
         });
         input.addEventListener("click", ev => {
           ev.preventDefault();
           if (state.conditionFocusLock) return;
+          if (rejectLocked(row)) return;
           openConditionDlg(row, input);
         });
         const pick = document.createElement("button");
@@ -1755,12 +1904,14 @@ function render() {
           ev.preventDefault();
           ev.stopPropagation();
           if (state.conditionFocusLock) return;
+          if (rejectLocked(row)) return;
           openConditionDlg(row, input);
         });
         td.appendChild(pick);
       }
       tr.appendChild(td);
     });
+    if (locked) tr.querySelectorAll("button.pick").forEach(b => { b.disabled = true; });
     tb.appendChild(tr);
   });
   tb.querySelectorAll('textarea[data-key="remarks"]').forEach(autosizeRemarks);
@@ -1947,6 +2098,7 @@ function closeConditionDlg() {
 function openConditionDlg(row, input) {
   const dlg = document.getElementById("conditionDlg");
   if (!row || !dlg || state.conditionFocusLock || dlg.open) return;
+  if (rejectLocked(row)) return;
   hideKeypad();
   hideSpeciesBar(true);
   setActiveRow(row);
@@ -1961,6 +2113,7 @@ function applyConditionValue(obj) {
   const val = formatCondition(obj);
   const row = state.rows.find(r => r.id === state.conditionTarget);
   const field = currentConditionField();
+  if (isRowLocked(row)) return;
   if (row) {
     pushUndo(row.id + ":condition");
     row.condition = val;
@@ -2022,6 +2175,8 @@ function bindNumInput(input) {
   input.setAttribute("autocorrect", "off");
   input.setAttribute("spellcheck", "false");
   input.addEventListener("focus", () => {
+    const row = rowFromInput(input);
+    if (rejectLocked(row)) { input.blur(); return; }
     hideSpeciesBar(false);
     showKeypad(input);
   });
@@ -2115,7 +2270,7 @@ function bulkFillAnchorIndex(pageIdx) {
 function applyBulkTreePrefix(prefix) {
   const pageIdx = currentPageIndexes();
   const startBelowSelected = bulkFillAnchorIndex(pageIdx);
-  const emptyOnPage = i => !String(state.rows[i].treeNo || "").trim();
+  const emptyOnPage = i => !String(state.rows[i].treeNo || "").trim() && !isRowLocked(state.rows[i]);
   const targets = pageIdx.filter(i => emptyOnPage(i) && (startBelowSelected < 0 || i > startBelowSelected));
   if (targets.length || state.treePrefix !== prefix) {
     pushUndo("bulk");
@@ -2195,6 +2350,7 @@ function prepareMeasureReplace(input) {
   input.value = "";
 }
 function showKeypad(input) {
+  if (rejectLocked(rowFromInput(input))) return;
   const prev = state.numTarget;
   if (prev && prev !== input) {
     const prevTr = prev.closest && prev.closest("tr");
@@ -2258,6 +2414,7 @@ function toggleRowOrange() {
   const row = currentTargetRow();
   const input = state.numTarget;
   if (!row || !input || input.dataset.key !== "h") return;
+  if (rejectLocked(row)) return;
   pushUndo();
   endUndoCoalesce();
   row.orange = !row.orange;
@@ -2271,6 +2428,7 @@ function toggleRowRemoved() {
   const row = currentTargetRow();
   const input = state.numTarget;
   if (!row || !input) return;
+  if (rejectLocked(row)) return;
   pushUndo();
   endUndoCoalesce();
   row.removed = !row.removed;
@@ -2288,6 +2446,7 @@ function setTreePrefix(prefix) {
   if (prefix === "removed") { toggleRowRemoved(); return; }
   const input = state.numTarget;
   if (!input) return;
+  if (rejectLocked(rowFromInput(input))) return;
   const cur = parseTreeNo(input.value);
   if (prefix === "⭐") cur.star = !cur.star;
   else cur.prefix = prefix;
@@ -2317,6 +2476,7 @@ function renderNumpadKeys(key) {
 function numpadPress(key) {
   const input = state.numTarget;
   if (!input) return;
+  if (rejectLocked(rowFromInput(input))) return;
   if (measureInputMatchesStash(input)) state.measureStash.dirty = true;
   let v = String(input.value || "");
   const field = input.dataset.key;
@@ -2340,6 +2500,8 @@ function numpadPress(key) {
 }
 function focusField(tr, key) {
   if (!tr) return false;
+  const targetRow = state.rows.find(r => r.id === tr.dataset.id);
+  if (isRowLocked(targetRow)) return false;
   if (key === "species") {
     hideKeypad();
     const input = tr.querySelector('input[data-key="species"]');
@@ -2366,19 +2528,27 @@ function numpadAdvance() {
   if (i >= 0 && i < NUM_ORDER.length - 1) {
     if (focusField(tr, NUM_ORDER[i + 1])) return;
   }
-  const nextRow = tr && tr.nextElementSibling;
-  if (nextRow && focusField(nextRow, "treeNo")) return;
+  let nextRow = tr && tr.nextElementSibling;
+  while (nextRow) {
+    if (focusField(nextRow, "treeNo")) return;
+    nextRow = nextRow.nextElementSibling;
+  }
   if (state.page < pageCount() - 1 || !isViewLimited()) {
     goPage(1);
-    const first = document.querySelector("#tbody tr input[data-key='treeNo']");
-    if (first) first.focus();
-  } else hideKeypad();
+    const rows = document.querySelectorAll("#tbody tr");
+    for (let i = 0; i < rows.length; i++) {
+      if (focusField(rows[i], "treeNo")) return;
+    }
+  }
+  hideKeypad();
 }
 
 function currentSpeciesInput() {
   return document.querySelector('tr[data-id="' + state.speciesTarget + '"] input[data-key="species"]');
 }
 function openSpeciesBar(rowId, cellInput) {
+  const row = state.rows.find(r => r.id === rowId);
+  if (rejectLocked(row)) return;
   hideKeypad();
   state.speciesTarget = rowId;
   const box = document.getElementById("speciesInput");
@@ -3069,16 +3239,23 @@ function applyImport(mode) {
 function oldRemarksRows() {
   return state.rows.filter(hasOldRemarks);
 }
+function unlockedOldRemarksRows() {
+  return state.rows.filter(r => hasOldRemarks(r) && !isRowLocked(r));
+}
 function syncRemarksOldBar() {
-  const n = oldRemarksRows().length;
+  const n = unlockedOldRemarksRows().length;
   const keep = document.getElementById("btnKeepAllOld");
   const del = document.getElementById("btnDeleteAllOld");
   if (keep) keep.disabled = !n;
   if (del) del.disabled = !n;
 }
 function applyKeepAllOldRemarks() {
-  const rows = oldRemarksRows();
-  if (!rows.length) { toast("而家冇舊 Remarks"); return; }
+  const rows = unlockedOldRemarksRows();
+  const skipped = oldRemarksRows().length - rows.length;
+  if (!rows.length) {
+    toast(skipped ? "已鎖定行的舊 Remarks 不會更改，請先解鎖" : "而家冇舊 Remarks");
+    return;
+  }
   pushUndo("remarksOld:all-keep");
   endUndoCoalesce();
   rows.forEach(row => {
@@ -3093,18 +3270,23 @@ function applyKeepAllOldRemarks() {
   const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
   render();
   if (dlgOpen) renderDefectPicker();
-  toast("已保留 " + rows.length + " 棵嘅舊 Remarks，而家係黑色");
+  toast("已保留 " + rows.length + " 棵嘅舊 Remarks，而家係黑色" + (skipped ? "。已鎖定的 " + skipped + " 棵未改" : ""));
 }
 function requestDeleteAllOldRemarks() {
-  const n = oldRemarksRows().length;
-  if (!n) { toast("而家冇舊 Remarks"); return; }
-  document.getElementById("oldDelMsg").textContent = "將會刪除 " + n + " 棵樹嘅舊 Remarks（紅色）。新輸入嘅黑色備註會留低。確定刪除？可用「上一步」復原。";
+  const n = unlockedOldRemarksRows().length;
+  const skipped = oldRemarksRows().length - n;
+  if (!n) {
+    toast(skipped ? "已鎖定行的舊 Remarks 不會更改，請先解鎖" : "而家冇舊 Remarks");
+    return;
+  }
+  document.getElementById("oldDelMsg").textContent = "將會刪除 " + n + " 棵樹嘅舊 Remarks（紅色）。新輸入嘅黑色備註會留低。" + (skipped ? "已完成並鎖定的 " + skipped + " 棵不會更改。" : "") + "確定刪除？可用「上一步」復原。";
   document.getElementById("oldDelDlg").showModal();
 }
 function applyDeleteAllOldRemarks() {
   const dlg = document.getElementById("oldDelDlg");
   if (dlg && dlg.open) dlg.close();
-  const rows = oldRemarksRows();
+  const rows = unlockedOldRemarksRows();
+  const skipped = oldRemarksRows().length - rows.length;
   if (!rows.length) return;
   pushUndo("remarksOld:all-delete");
   endUndoCoalesce();
@@ -3116,7 +3298,7 @@ function applyDeleteAllOldRemarks() {
   const dlgOpen = document.getElementById("defectDlg") && document.getElementById("defectDlg").open;
   render();
   if (dlgOpen) renderDefectPicker();
-  toast("已刪除 " + rows.length + " 棵嘅舊 Remarks");
+  toast("已刪除 " + rows.length + " 棵嘅舊 Remarks" + (skipped ? "。已鎖定的 " + skipped + " 棵未改" : ""));
 }
 function syncDefectOldBox() {
   const box = document.getElementById("defectOldBox");
@@ -3516,30 +3698,44 @@ function initRecList() {
   });
 }
 
+function completedFilledCount() {
+  return state.rows.filter(r => isFilled(r) && isRowCompleted(r)).length;
+}
+function clearableFilledCount() {
+  return state.rows.filter(r => isFilled(r) && !isRowCompleted(r)).length;
+}
 function requestClearAll() {
   hideKeypad();
   hideSpeciesBar(true);
-  const n = filledCount();
-  if (!n) { toast("未有資料要清除"); return; }
-  document.getElementById("clearMsg").textContent = "將會清除而家全部 " + n + " 棵記錄。確定要清空？清除後可用「上一步」復原。";
+  const n = clearableFilledCount();
+  const kept = completedFilledCount();
+  if (!n) {
+    toast(kept ? "沒有可清除的未完成資料。已完成並鎖定的資料會保留" : "未有資料要清除");
+    return;
+  }
+  const keptBit = kept ? (kept + " 棵已完成並鎖定的資料會保留。") : "已完成並鎖定的資料會保留。";
+  document.getElementById("clearMsg").textContent = "將會清除而家 " + n + " 棵未完成記錄。" + keptBit + "確定要清空？清除後可用「上一步」復原。";
   document.getElementById("clearDlg").showModal();
 }
 function applyClearAll() {
   document.getElementById("clearDlg").close();
-  if (!filledCount()) return;
+  const n = clearableFilledCount();
+  if (!n) return;
+  const kept = completedFilledCount();
   pushUndo("clear");
   endUndoCoalesce();
-  state.rows = [];
+  state.rows = state.rows.map(row => isRowCompleted(row) ? row : emptyRowWithId());
   state.page = 0;
   state.treePrefix = "";
   state.filter = "all";
+  state.workRowId = null;
   document.getElementById("q").value = "";
   padToPageMultiple();
   save();
   syncBulkPrefixButtons();
   syncFilterButtons();
   render();
-  toast("已清除全部記錄，可用「上一步」復原");
+  toast(kept ? ("已清除未完成記錄，已完成並鎖定的資料已保留，可用「上一步」復原") : "已清除全部記錄，可用「上一步」復原");
 }
 
 document.getElementById("job").addEventListener("input", ev => { pushUndo("job"); state.job = ev.target.value; save(); });
@@ -3622,6 +3818,18 @@ document.getElementById("oldDelCancel").addEventListener("click", () => {
 document.getElementById("oldDelConfirm").addEventListener("click", ev => {
   ev.preventDefault();
   applyDeleteAllOldRemarks();
+});
+document.getElementById("unlockCancel").addEventListener("click", ev => {
+  ev.preventDefault();
+  cancelUnlockRow();
+});
+document.getElementById("unlockConfirm").addEventListener("click", ev => {
+  ev.preventDefault();
+  applyUnlockRow();
+});
+document.getElementById("unlockDlg").addEventListener("cancel", () => {
+  state.pendingUnlockId = null;
+  armUnlockCloseLock();
 });
 document.getElementById("defectClear").addEventListener("click", () => {
   const input = currentDefectField();
