@@ -114,6 +114,13 @@
     color: var(--green-dark);
   }
   .bulk-prefix #btnMarkDone.on { background: var(--green); color: #fff; }
+  .bulk-prefix #btnDeleteTree {
+    margin-left: 6px;
+    min-width: 88px;
+    background: #fff;
+    color: var(--danger);
+    border-color: #e0b4b4;
+  }
   .view-filter { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
   .view-filter .lab { font-size: 13px; font-weight: 700; color: var(--green-dark); }
   .view-filter button {
@@ -172,6 +179,7 @@
   }
   main { padding: 8px 10px calc(16px + var(--safe-bottom)); }
   body.numpad-open main { padding-bottom: 320px; }
+  body.numpad-open.mode-dbh main { padding-bottom: 470px; }
   body.species-open main { padding-top: 8px; }
   .sheet-wrap {
     overflow: auto;
@@ -345,6 +353,7 @@
     max-width: 90vw;
   }
   body.numpad-open .toast { bottom: 300px; }
+  body.numpad-open.mode-dbh .toast { bottom: 450px; }
   body.species-open .toast { bottom: 24px; }
   .toast.show { opacity: 1; }
   dialog.modal {
@@ -909,6 +918,87 @@
     background: #fff; color: var(--danger); border-color: #e0b4b4;
   }
   .numpad-grid button.fn { font-size: 16px; }
+  .dbh-extra {
+    max-width: 420px;
+    margin: 0 auto 8px;
+  }
+  .dbh-calc {
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--green-dark);
+    background: #fff;
+    border: 1px solid var(--green);
+    border-radius: 8px;
+    padding: 6px 8px;
+    margin: 0 0 6px;
+  }
+  .dbh-calc[hidden], .dbh-extra[hidden] { display: none; }
+  .dbh-stem-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0 0 6px;
+  }
+  .dbh-stem-list {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-height: 40px;
+  }
+  .dbh-stem-list button, .dbh-recent-list button {
+    min-height: 40px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #fff;
+    color: var(--green-dark);
+    border: 1px solid #9cb8a8;
+    border-radius: 8px;
+  }
+  .dbh-stem-list button.on {
+    background: var(--green-soft);
+    border-color: var(--green);
+  }
+  .dbh-stem-list .stem-empty {
+    font-size: 12px;
+    color: #66756c;
+    align-self: center;
+  }
+  #dbhAddStem {
+    min-height: 40px;
+    min-width: 64px;
+    padding: 4px 10px;
+    font-weight: 700;
+    flex: 0 0 auto;
+  }
+  .dbh-recent .lab {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--green-dark);
+    margin: 0 0 4px;
+  }
+  .dbh-recent-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .dbh-recent-list .dbh-recent-empty {
+    font-size: 12px;
+    color: #66756c;
+    align-self: center;
+  }
+  td.has-dbh-stems { vertical-align: top; }
+  .dbh-stem-hint {
+    font-size: 9px;
+    line-height: 1.15;
+    color: #555;
+    text-align: center;
+    word-break: break-all;
+    padding: 0 1px 2px;
+  }
 
 </style>
 </head>
@@ -977,6 +1067,7 @@
   <button type="button" data-prefix="AT">AT</button>
   <button type="button" data-prefix="TG">TG</button>
   <button type="button" id="btnMarkDone">完成</button>
+  <button type="button" class="danger" id="btnDeleteTree">刪除此樹</button>
 </div>
 <main>
   <div class="sheet-wrap" id="wrap">
@@ -1020,6 +1111,17 @@
   <div class="prefixes h-options" id="hOptions">
     <button type="button" id="btnOrange">Orange</button>
   </div>
+  <div id="dbhExtra" class="dbh-extra" hidden>
+    <div class="dbh-calc" id="dbhCalcLine" hidden></div>
+    <div class="dbh-stem-row">
+      <div class="dbh-stem-list" id="dbhStemList"></div>
+      <button type="button" class="secondary" id="dbhAddStem">加 D</button>
+    </div>
+    <div class="dbh-recent" id="dbhRecentBox">
+      <span class="lab">最近記錄</span>
+      <div class="dbh-recent-list" id="dbhRecentList"></div>
+    </div>
+  </div>
   <div class="numpad-grid" id="numpadGrid"></div>
   </div>
 </div>
@@ -1051,6 +1153,16 @@
     <div class="modal-actions">
       <button type="button" class="secondary" id="unlockCancel">取消</button>
       <button type="button" id="unlockConfirm">確定解鎖</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="modal" id="deleteDlg">
+  <div class="modal-body">
+    <h3>刪除此樹資料？</h3>
+    <p id="deleteMsg">確定刪除這一棵的資料？刪除後可用「上一步」復原。其他樹木的編號不會改動。</p>
+    <div class="modal-actions">
+      <button type="button" class="secondary" id="deleteCancel">取消</button>
+      <button type="button" class="danger" id="deleteConfirm">確定刪除</button>
     </div>
   </div>
 </dialog>
@@ -1125,7 +1237,7 @@
 <script>
 const STORAGE_KEY = "field-tree-schedule-v1";
 const PAGE_SIZE = 10;
-const APP_VER = "64";
+const APP_VER = "65";
 const COLS = [
   { key: "treeNo", label: "Tree No." },
   { key: "species", label: "Species Name" },
@@ -1204,12 +1316,22 @@ const REMARK_C_LOCATION_PARTS = [
   { abbr: "drainage", name: "Drainage channel embankment" },
   { abbr: "shore", name: "Shore" }
 ];
-const REMARK_C_IC_PARTS = [
-  { abbr: "Hoarding", name: "In conflict the hoarding" },
-  { abbr: "Building", name: "In conflict the building" },
-  { abbr: "Fencing", name: "In conflict the fencing" },
-  { abbr: "Wall", name: "In conflict the wall" }
+const REMARK_C_IC_TREE_PARTS = [
+  { abbr: "Crown", part: "crown" },
+  { abbr: "Trunk", part: "trunk" }
 ];
+const REMARK_C_IC_OBJECTS = [
+  { abbr: "Hoarding", noun: "hoarding" },
+  { abbr: "Building", noun: "building" },
+  { abbr: "Fencing", noun: "fencing" },
+  { abbr: "Wall", noun: "wall" }
+];
+function remarkCIcName(noun, part) {
+  return "In conflict the " + noun + " on " + part;
+}
+function isInConflictRemark(name) {
+  return /^In conflict\b/.test(remarkBaseName(name));
+}
 const REMARK_C_RR_PARTS = [
   { abbr: "Hoarding", name: "Restricted root hoarding" },
   { abbr: "Debris", name: "Restricted root debris" }
@@ -1222,7 +1344,7 @@ const REMARK_C_PROXIMITY_PARTS = [
 ];
 const REMARK_C_LOCS = [
   { abbr: "Location", title: "Location", parts: REMARK_C_LOCATION_PARTS },
-  { abbr: "In conflict", title: "In conflict", parts: REMARK_C_IC_PARTS },
+  { abbr: "In conflict", title: "In conflict", ic: true },
   { abbr: "RR", title: "Restricted root", parts: REMARK_C_RR_PARTS },
   { abbr: "proximity", title: "Tree is located proximity", parts: REMARK_C_PROXIMITY_PARTS }
 ];
@@ -1280,10 +1402,10 @@ const REMARK_C_GROUPS = [
   { label: "Form", items: REMARK_C_FORM }
 ];
 const RECOMMENDATIONS = ["Crown cleaning","Crown reduction","Crown thinning","Crown raising","Staking","Cabling","Cobra","Re-inspection within 6 months","Re-inspection within 3 months","Removal","Resis/tomo"];
-const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Debris", "Decay on branch", "Decay on roots", "Decay on trunk", "Decaying branch", "Decaying trunk", "Decaying trunk base", "Dehydrated trunk", "Dieback", "Drainage channel embankment", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling root", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict building", "In conflict fencing", "In conflict hoarding", "In conflict the building", "In conflict the fencing", "In conflict the hoarding", "In conflict the wall", "In conflict wall", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root debris", "Restricted root growth", "Restricted root hoarding", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Shore", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suppressed by adjacent trees", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree is located proximity to the building", "Tree is located proximity to the fencing", "Tree is located proximity to the hoarding", "Tree is located proximity to the hoarding/building", "Tree is located proximity to the wall", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
+const DEFECTS = ["Abnormal bark crack on branch", "Abnormal bark crack on crown", "Abnormal bark crack on trunk", "Abnormal bark crack on trunk base", "Abnormal leaf size", "Asymmetric crown", "Bee hive", "Bending", "Bird nest", "Borer Frass", "Borer holes", "Branch topped", "Broken branch", "Broken branches", "Broken crown", "Broken leader", "Broken trunk", "Broken trunk base", "Bulge", "Burls", "Canker", "Cavity", "Cavity on branch", "Cavity on crown", "Cavity on roots", "Cavity on trunk", "Cavity on trunk base", "Chlorotic leaves", "Climbers", "Collapsed", "Co-dominant branches", "Co-dominant branches with included bark", "Co-dominant trunks", "Co-dominant trunks with included bark", "Conflict with building", "Conflict with traffic", "Crack", "Crack on branch", "Crack on root", "Crooks", "Crossing branches", "Crossing trunks", "Crown", "Crown growth suppressed by adjacent trees", "Dead branch", "Dead branch_close up", "Dead branches", "Dead crown", "Dead frond", "Dead fronds", "Dead stub", "Dead surface root", "Dead tree", "Dead trunk", "Dead trunk base", "Dead twigs", "Dead wood on branch", "Dead wood on crown", "Dead wood on trunk", "Dead wood on trunk base", "Debris", "Decay on branch", "Decay on roots", "Decay on trunk", "Decaying branch", "Decaying trunk", "Decaying trunk base", "Dehydrated trunk", "Dieback", "Drainage channel embankment", "Drooping branches", "Epicormics", "Epiphytic plant", "Exposed dead wood", "Exposed dead wood on branch", "Exposed dead wood on crown", "Exposed dead wood on trunk", "Exposed dead wood on trunk base", "Exposed root", "Fissures on branches", "Fungal fruiting bodies on branch", "Fungal fruiting bodies on root", "Fungal fruiting bodies on trunk", "Fungal fruiting bodies on trunk base", "Fungal fruiting body on branch", "Fungal fruiting body on root", "Fungal fruiting body on trunk", "Fungal fruiting body on trunk base", "Fungi", "Gall", "Galls", "Girdling root", "Girdling roots", "Hanger", "Heavy lateral branch", "Imbalanced crown", "In conflict building", "In conflict fencing", "In conflict hoarding", "In conflict the building", "In conflict the building on crown", "In conflict the building on trunk", "In conflict the fencing", "In conflict the fencing on crown", "In conflict the fencing on trunk", "In conflict the hoarding", "In conflict the hoarding on crown", "In conflict the hoarding on trunk", "In conflict the wall", "In conflict the wall on crown", "In conflict the wall on trunk", "In conflict wall", "In conflict with the hoarding", "Included bark", "Included bark with response growth", "Leaning", "Leaning due to phototropism", "Leaning with self-correction", "Leaning with staking", "Leaning without root-plate movement", "Lion's tailing", "Low live crown ratio", "Main trunk broken", "Mechanical injury", "Minor dead branch", "Minor dieback", "Minor sap flow", "Missing leader", "Multiple trunks", "Narrowing trunk", "No hollow detected", "No visible root flare", "Old termite track", "On slope", "Overextended branch", "Overgrown", "Parasitic plant", "Penciling", "Poor health", "Poor taper", "Previous root-plate movement", "Pruning wound on branch", "Pruning wound on trunk", "Reduced crown", "Removed", "Restricted root debris", "Restricted root growth", "Restricted root hoarding", "Root", "Root plate movement", "Sap flow", "Seasonal defoliation", "Severely sparse foliage", "Shore", "Sign of borer", "Sign of pest", "Sign of pest infestation", "Sign of Phauda flammans infestation", "Slightly leaning", "Small crown size", "Soil erosion", "Sparse foliage", "Spiral grain", "Split", "Split on branch", "Split on root", "Stump", "Strangled by ficus seedling", "Sunscald", "Suppressed by adjacent trees", "Suspected BRRD", "Suspected hollow by sounding test", "Swelling", "Tag", "Tearing wound", "Termite mud tubes", "Termite track", "Termite track with live termite", "Topped", "Tree is located proximity to the building", "Tree is located proximity to the fencing", "Tree is located proximity to the hoarding", "Tree is located proximity to the hoarding/building", "Tree is located proximity to the wall", "Tree located at drainage channel embankment", "Tree located near hoarding", "Trunk", "Trunk base", "Trunk conflict with railing", "Uprooted", "V-shaped crotch with included bark", "Whole view", "Wilted apical bud", "Wilted crown", "Wilting", "Wilting fronds", "Within construction site", "Wound on branch", "Wound on crown", "Wound on lower trunk", "Wound on roots", "Wound on trunk", "Wound on trunk base", "Wound on trunk union", "Wound sealed by concrete"];
 
 const SPECIES = [{"sci":"Neodypsis decaryi","zh":["三角葵"]},{"sci":"Callistemon viminalis","zh":["串錢柳"]},{"sci":"Yulania × soulangeana","zh":["二喬木蘭"]},{"sci":"Litsea monopetala","zh":["假柿樹"]},{"sci":"Archontophoenix alexandrae","zh":["假檳榔"]},{"sci":"Ficus rumphii","zh":["假菩提樹","心葉榕"]},{"sci":"Sterculia lanceolata","zh":["假蘋婆"]},{"sci":"Platycladus orientalis","zh":["側柏"]},{"sci":"Schefflera actinophylla","zh":["傘樹"]},{"sci":"Alangium chinense","zh":["八角楓"]},{"sci":"Erythrina variegata","zh":["刺桐"]},{"sci":"Phoenix loureiroi","zh":["刺葵"]},{"sci":"Dalbergia assamica","zh":["南嶺黃檀"]},{"sci":"Choerospondias axillaris","zh":["南酸棗"]},{"sci":"Ficus elastica","zh":["印度橡樹"]},{"sci":"Acacia confusa","zh":["台灣相思"]},{"sci":"Michelia figo","zh":["含笑"]},{"sci":"Ravenea rivularis","zh":["國王椰子"]},{"sci":"Juniperus chinensis","zh":["圓柏"]},{"sci":"Aquilaria sinensis","zh":["土沉香"]},{"sci":"Bridelia tomentosa","zh":["土蜜樹"]},{"sci":"Salix babylonica","zh":["垂柳"]},{"sci":"Ficus benjamina","zh":["垂葉榕"]},{"sci":"Roystonea regia","zh":["大王椰子","王棕"]},{"sci":"Lagerstroemia speciosa","zh":["大花紫薇"]},{"sci":"Albizia lebbeck","zh":["大葉合歡"]},{"sci":"Eucalyptus robusta","zh":["大葉桉"]},{"sci":"Ficus virens var. sublanceolata","zh":["大葉榕"]},{"sci":"Acacia mangium","zh":["大葉相思"]},{"sci":"Nerium oleander","zh":["夾竹桃"]},{"sci":"Bauhinia variegata","zh":["宮粉羊蹄甲"]},{"sci":"Ficus hispida","zh":["對葉榕"]},{"sci":"Terminalia mantaly","zh":["小葉欖仁"]},{"sci":"Eucalyptus urophylla","zh":["尾葉桉"]},{"sci":"Ligustrum sinense","zh":["山指甲"]},{"sci":"Ligustrum lucidum","zh":["女貞","大葉女貞"]},{"sci":"Elaeocarpus sylvestris","zh":["山杜英"]},{"sci":"Syzygium levinei","zh":["山蒲桃"]},{"sci":"Spondias lakonensis","zh":["嶺南酸棗"]},{"sci":"Ailanthus fordii","zh":["常綠臭椿","福氏臭椿"]},{"sci":"Dypsis lutescens","zh":["散尾葵"]},{"sci":"Ficus tinctoria subsp. gibbosa","zh":["斜葉榕"]},{"sci":"Ravenala madagascariensis","zh":["旅人蕉"]},{"sci":"Phoenix roebelenii","zh":["日本葵","軟葉刺葵"]},{"sci":"Bombax ceiba","zh":["木棉"]},{"sci":"Vernicia montana","zh":["木油樹"]},{"sci":"Carica papaya","zh":["木瓜"]},{"sci":"Schima superba","zh":["木荷"]},{"sci":"Casuarina equisetifolia","zh":["木麻黃"]},{"sci":"Celtis sinensis","zh":["朴","朴樹"]},{"sci":"Mangifera indica","zh":["杧果"],"aliases":["芒果","mango"]},{"sci":"Eriobotrya japonica","zh":["枇杷"]},{"sci":"Citrus maxima","zh":["柚"]},{"sci":"Eucalyptus saligna","zh":["柳葉桉"]},{"sci":"Prunus persica","zh":["桃"]},{"sci":"Eucalyptus spp.","zh":["桉屬"]},{"sci":"Morus alba","zh":["桑"]},{"sci":"Reevesia thyrsoidea","zh":["梭羅樹"]},{"sci":"Hyophorbe verschaffeltii","zh":["棍棒椰子"]},{"sci":"Trachycarpus fortunei","zh":["棕櫚"]},{"sci":"Averrhoa carambola","zh":["楊桃"]},{"sci":"Liquidambar formosana","zh":["楓香"]},{"sci":"Brachychiton acerifolius","zh":["槭葉蘋婆"]},{"sci":"Michelia chapensis","zh":["樂昌含笑"]},{"sci":"Cinnamomum camphora","zh":["樟","樟樹"]},{"sci":"Crateva unilocularis","zh":["樹頭菜","魚木"]},{"sci":"Olea europaea","zh":["橄欖"]},{"sci":"Areca catechu","zh":["檳榔"]},{"sci":"Eucalyptus citriodora","zh":["檸檬桉"],"aliases":["Corymbia citriodora"]},{"sci":"Terminalia catappa","zh":["欖仁","欖仁樹"]},{"sci":"Elaeocarpus rugosus","zh":["毛果杜英"]},{"sci":"Eucalyptus torelliana","zh":["毛葉桉"],"aliases":["Corymbia torelliana"]},{"sci":"Elaeocarpus hainanensis","zh":["水石榕"]},{"sci":"Cleistocalyx nervosum","zh":["水翁"]},{"sci":"Pongamia pinnata","zh":["水黃皮"]},{"sci":"Elaeis guineensis","zh":["油棕"]},{"sci":"Bauhinia × blakeana","zh":["洋紫荊"],"aliases":["洋紫荆","香港市花"]},{"sci":"Ormosia pinnata","zh":["海南紅豆"]},{"sci":"Syzygium cumini","zh":["海南蒲桃"]},{"sci":"Cerbera manghas","zh":["海芒果"]},{"sci":"Machilus spp.","zh":["潤楠屬"]},{"sci":"Litsea glutinosa","zh":["潺槁樹"]},{"sci":"Pinus elliottii","zh":["濕地松"]},{"sci":"Spathodea campanulata","zh":["火焰木"]},{"sci":"Sapium sebiferum","zh":["烏桕"]},{"sci":"Wodyetia bifurcata","zh":["狐尾椰子"]},{"sci":"Ficus pandurata","zh":["琴葉榕"]},{"sci":"Ficus annulata","zh":["環紋榕"]},{"sci":"Psidium guajava","zh":["番石榴"]},{"sci":"Araucaria heterophylla","zh":["異葉南洋杉"]},{"sci":"Araucaria columnaris","zh":["柱葉南洋杉"],"aliases":["小葉南洋杉"]},{"sci":"Melaleuca cajuputi","zh":["白千層"],"aliases":["Melaleuca cajuputi subsp. Cumingiana"]},{"sci":"Mallotus paniculatus","zh":["白楸"]},{"sci":"Bauhinia variegata var. candida","zh":["白花羊蹄甲"]},{"sci":"Michelia × alba","zh":["白蘭"],"aliases":["Magnolia x alba","Magnolia × alba"]},{"sci":"Syagrus romanzoffiana","zh":["皇后葵"]},{"sci":"Machilus breviflora","zh":["短序潤楠"]},{"sci":"Caryota mitis","zh":["短穗魚尾葵"]},{"sci":"Aleurites moluccana","zh":["石栗"],"aliases":["Aleurites moluccanus"]},{"sci":"Cordia dichotoma","zh":["破布木"]},{"sci":"Garcinia spicata","zh":["福木"]},{"sci":"Bischofia trifoliata","zh":["秋楓"]},{"sci":"Nageia nagi","zh":["竹柏"]},{"sci":"Ficus subpisocarpa","zh":["筆管榕"]},{"sci":"Alstonia scholaris","zh":["糖膠樹"]},{"sci":"Callistemon rigidus","zh":["紅千層"]},{"sci":"Artocarpus nitidus subsp. lingnanensis","zh":["紅桂木"]},{"sci":"Prunus mume cv. Alphandii","zh":["紅梅"]},{"sci":"Lophostemon confertus","zh":["紅膠木"]},{"sci":"Bauhinia purpurea","zh":["紅花羊蹄甲"]},{"sci":"Grevillea banksii","zh":["紅花銀樺"]},{"sci":"Tabebuia rosea","zh":["紅花風鈴木"]},{"sci":"Pterocarpus indicus","zh":["紫檀"]},{"sci":"Lagerstroemia indica","zh":["紫薇"]},{"sci":"Eucalyptus tereticornis","zh":["細葉桉"]},{"sci":"Ficus microcarpa","zh":["細葉榕"]},{"sci":"Chorisia speciosa","zh":["絲木棉"]},{"sci":"Thespesia populnea","zh":["繖楊"]},{"sci":"Podocarpus macrophyllus","zh":["羅漢松"]},{"sci":"Bauhinia spp.","zh":["羊蹄甲屬"]},{"sci":"Acacia auriculiformis","zh":["耳果相思"]},{"sci":"Ficus racemosa","zh":["聚果榕"]},{"sci":"Cassia fistula","zh":["臘腸樹","豬腸豆"]},{"sci":"Erythrina indica cv. Picta","zh":["花葉刺桐"]},{"sci":"Ficus elastica cv. Variegata","zh":["花葉印度橡樹"]},{"sci":"Ficus benjamina cv. Variegata","zh":["花葉垂榕"]},{"sci":"Melia azedarach","zh":["苦楝"]},{"sci":"Tetradium glabrifolium","zh":["楝葉吳茱萸"],"aliases":["Evodia glabrifolia"]},{"sci":"Litchi chinensis","zh":["荔枝"],"aliases":["荔支"]},{"sci":"Magnolia grandiflora","zh":["荷花玉蘭"]},{"sci":"Artocarpus heterophyllus","zh":["菠蘿蜜"]},{"sci":"Ficus religiosa","zh":["菩提樹"]},{"sci":"Machilus chinensis","zh":["華潤楠"]},{"sci":"Washingtonia robusta","zh":["華盛頓葵"]},{"sci":"Garcinia subelliptica","zh":["菲島福木"]},{"sci":"Taxodium distichum","zh":["落羽杉"]},{"sci":"Syzygium jambos","zh":["蒲桃"]},{"sci":"Livistona chinensis","zh":["蒲葵"]},{"sci":"Jacaranda mimosifolia","zh":["藍花楹"]},{"sci":"Cycas revoluta","zh":["蘇鐵"]},{"sci":"Sterculia nobilis","zh":["蘋婆"]},{"sci":"Cleidiocarpon cavaleriei","zh":["蝴蝶果"]},{"sci":"Macaranga tanarius","zh":["血桐"]},{"sci":"Castanopsis fissa","zh":["裂斗錐栗"]},{"sci":"Koelreuteria bipinnata","zh":["複羽葉欒樹"]},{"sci":"Hyophorbe lagenicaulis","zh":["酒瓶椰子"]},{"sci":"Beaucarnea recurvata","zh":["酒瓶蘭"]},{"sci":"Xanthostemon chrysanthus","zh":["金蒲桃"]},{"sci":"Crateva trifoliata","zh":["鈍葉魚木"]},{"sci":"Leucaena leucocephala","zh":["銀合歡"]},{"sci":"Aporusa dioica","zh":["銀柴"]},{"sci":"Grevillea robusta","zh":["銀樺"]},{"sci":"Phoenix sylvestris","zh":["銀海棗"]},{"sci":"Peltophorum tonkinense","zh":["銀珠"]},{"sci":"Terminalia mantaly cv. 'Tricolour'","zh":["錦葉欖仁"]},{"sci":"Ilex rotunda","zh":["鐵冬青"]},{"sci":"Senna siamea","zh":["鐵刀木"]},{"sci":"Polyalthia longifolia","zh":["長葉暗羅"]},{"sci":"Ficus longifolia","zh":["長葉榕"]},{"sci":"Hamelia patens","zh":["長隔木"]},{"sci":"Terminalia arjuna","zh":["阿江欖仁"]},{"sci":"Cinnamomum burmannii","zh":["陰香"]},{"sci":"Peltophorum pterocarpum","zh":["雙翼豆"]},{"sci":"Plumeria rubra","zh":["雞蛋花"]},{"sci":"Elaeocarpus yunnanensis","zh":["雲南杜英"]},{"sci":"Chamaecyparis pisifera cv. Squarrosa","zh":["雲松"]},{"sci":"Ficus variegata","zh":["青果榕"]},{"sci":"Khaya senegalensis","zh":["非洲桃花心木","非洲楝"]},{"sci":"Phyllanthus emblica","zh":["餘甘子"]},{"sci":"Toona sinensis","zh":["香椿"]},{"sci":"Pinus massoniana","zh":["馬尾松"]},{"sci":"Pachira aquatica","zh":["馬拉巴栗"]},{"sci":"Ficus altissima","zh":["高山榕"]},{"sci":"Caryota maxima","zh":["魚尾葵"]},{"sci":"Delonix regia","zh":["鳳凰木"]},{"sci":"Schefflera heptaphylla","zh":["鴨腳木"]},{"sci":"Artocarpus altilis","zh":["麵包樹"]},{"sci":"Chukrasia tabularis","zh":["麻楝"]},{"sci":"Senna surattensis","zh":["黃槐"]},{"sci":"Hibiscus tiliaceus","zh":["黃槿"]},{"sci":"Clausena lansium","zh":["黃皮"]},{"sci":"Erythrina indica var. picta","zh":["黃脈刺桐"]},{"sci":"Thevetia peruviana","zh":["黃花夾竹桃"]},{"sci":"Michelia champaca","zh":["黃蘭"],"aliases":["Magnolia champaca"]},{"sci":"Tabebuia chrysantha","zh":["黃鐘木"]},{"sci":"Juniperus chinensis var. kaizuka","zh":["龍柏"],"aliases":["Juniperus chinensis 'Kaizuca'","Juniperus chinensis 'Kaizuka'"]},{"sci":"Dimocarpus longan","zh":["龍眼"],"aliases":["龍眼樹"]}];
-const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, workRowId: null, pendingUnlockId: null, unlockCloseLock: false, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
+const state = { job: "", rows: [], page: 0, treePrefix: "", filter: "all", pendingImport: null, defectTarget: null, recTarget: null, speciesTarget: null, conditionTarget: null, conditionFocusLock: false, numTarget: null, activeRowId: null, workRowId: null, pendingUnlockId: null, pendingDeleteId: null, unlockCloseLock: false, measureStash: null, editStash: null, remarkMod: "", remarkMode: "A" };
 
 function emptyRow() {
   return { treeNo: "", species: "", h: "", s: "", dbh: "", condition: "", remarks: "", remarksOld: "", recommendation: "", done: false, removed: false, orange: false };
@@ -1454,6 +1576,10 @@ function load() {
         const resolved = resolveSpeciesValue(row.species);
         if (resolved !== row.species) { row.species = resolved; cleaned = true; }
       }
+      const beforeDbh = String(row.dbh || "") + "\0" + JSON.stringify(row.dbhStems || null);
+      applyDbhStemsToRow(row, Array.isArray(r.dbhStems) ? r.dbhStems : null, row.dbh);
+      const afterDbh = String(row.dbh || "") + "\0" + JSON.stringify(row.dbhStems || null);
+      if (afterDbh !== beforeDbh) cleaned = true;
       return row;
     });
     if (cleaned) try { /* persist after decode */ } catch (e) {}
@@ -1465,6 +1591,7 @@ function load() {
   }
   padToPageMultiple();
   if (state.page > pageCount() - 1) state.page = 0;
+  loadDbhRecent();
 }
 
 function save() {
@@ -1501,7 +1628,7 @@ function closeTransientUi() {
   state.editStash = null;
   hideKeypad();
   hideSpeciesBar(false);
-  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg", "oldDelDlg", "unlockDlg"].forEach(id => {
+  ["conditionDlg", "defectDlg", "recDlg", "importDlg", "clearDlg", "oldDelDlg", "unlockDlg", "deleteDlg"].forEach(id => {
     const el = document.getElementById(id);
     if (el && el.open) el.close();
   });
@@ -1584,7 +1711,7 @@ function beginEdit(row, key) {
   setWorkRow(row);
   if (state.editStash && state.editStash.rowId === row.id && state.editStash.key === key) return;
   commitEditStash();
-  const original = key === "species" ? row.species : String(row[key] || "");
+  const original = key === "species" ? row.species : (key === "dbh" ? dbhEditSignature(row) : String(row[key] || ""));
   state.editStash = { rowId: row.id, key: key, original: original };
 }
 function commitEditStash() {
@@ -1593,7 +1720,7 @@ function commitEditStash() {
   const row = state.rows.find(r => r.id === st.rowId);
   state.editStash = null;
   if (!row) return;
-  const cur = st.key === "species" ? row.species : String(row[st.key] == null ? "" : row[st.key]);
+  const cur = st.key === "species" ? row.species : (st.key === "dbh" ? dbhEditSignature(row) : String(row[st.key] == null ? "" : row[st.key]));
   if (String(st.original || "").trim() !== String(cur || "").trim()) maybeAutoDone(row);
   renderIfFilterStale();
 }
@@ -1643,6 +1770,7 @@ function requestUnlockRow(row) {
   if (!row || !isRowLocked(row) || state.unlockCloseLock) return;
   hideKeypad();
   hideSpeciesBar(true);
+  setActiveRow(row);
   state.pendingUnlockId = row.id;
   const label = String(row.treeNo || "").trim();
   const msg = document.getElementById("unlockMsg");
@@ -1765,6 +1893,12 @@ function render() {
       if (c.key === "species") td.className = ((td.className || "") + " has-pick").trim();
       const input = document.createElement(c.key === "remarks" ? "textarea" : "input");
       input.value = c.key === "species" ? speciesDisplay(row.species) : (c.key === "condition" ? formatCondition(row[c.key]) : (row[c.key] || ""));
+      if (c.key === "dbh") {
+        const stems = dbhStemsFromRow(row);
+        if (stems.length >= 2) {
+          input.title = stems.map((s, i) => "D" + (i + 1) + " " + s).join("、") + " → " + (row.dbh || "");
+        }
+      }
       input.dataset.key = c.key;
       input.setAttribute("aria-label", c.label);
       if (c.key === "remarks") {
@@ -1811,6 +1945,7 @@ function render() {
       });
       input.addEventListener("focus", ev => {
         if (isRowLocked(row)) {
+          setActiveRow(row);
           ev.target.blur();
           toastLocked();
           return;
@@ -1828,6 +1963,16 @@ function render() {
         td.appendChild(oldWrap);
       }
       td.appendChild(input);
+      if (c.key === "dbh") {
+        const stems = dbhStemsFromRow(row);
+        if (stems.length >= 2) {
+          td.classList.add("has-dbh-stems");
+          const hint = document.createElement("div");
+          hint.className = "dbh-stem-hint";
+          hint.textContent = stems.join("+");
+          td.appendChild(hint);
+        }
+      }
       if (c.key === "species") {
         const pick = document.createElement("button");
         pick.type = "button";
@@ -2325,6 +2470,364 @@ function initBulkPrefix() {
   syncMarkDoneButton();
 }
 
+
+const DBH_RECENT_KEY = "field-tree-schedule-dbh-recent";
+const DBH_RECENT_LIMIT = 8;
+let dbhRecent = [];
+let dbhEdit = null;
+
+function parseStemNumber(s) {
+  const n = Number(String(s == null ? "" : s).trim());
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function normalizeDbhStemsList(stems) {
+  if (!Array.isArray(stems)) return [];
+  const out = [];
+  stems.forEach(s => {
+    const raw = String(s == null ? "" : s).trim();
+    if (parseStemNumber(raw) != null) out.push(raw);
+  });
+  return out;
+}
+function equivalentDbh(stems) {
+  const nums = normalizeDbhStemsList(stems).map(parseStemNumber).filter(n => n != null);
+  if (!nums.length) return "";
+  if (nums.length === 1) return String(normalizeDbhStemsList(stems)[0]);
+  let sumSq = 0;
+  nums.forEach(d => { sumSq += d * d; });
+  return String(Math.round(Math.sqrt(sumSq)));
+}
+function dbhStemsFromRow(row) {
+  if (!row) return [];
+  const stems = normalizeDbhStemsList(row.dbhStems);
+  if (stems.length >= 2) return stems;
+  const v = String(row.dbh || "").trim();
+  return v && parseStemNumber(v) != null ? [v] : (v ? [v] : []);
+}
+function dbhEditSignature(row) {
+  const stems = normalizeDbhStemsList(row && row.dbhStems);
+  return String((row && row.dbh) || "") + "\n" + stems.join(",");
+}
+function applyDbhStemsToRow(row, stems, fallbackDbh) {
+  if (!row) return;
+  const list = normalizeDbhStemsList(stems);
+  if (list.length >= 2) {
+    row.dbhStems = list;
+    row.dbh = equivalentDbh(list);
+  } else {
+    if (row.dbhStems) delete row.dbhStems;
+    if (list.length === 1) row.dbh = list[0];
+    else row.dbh = fallbackDbh == null ? "" : String(fallbackDbh);
+  }
+}
+function loadDbhRecent() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DBH_RECENT_KEY) || "null");
+    if (!Array.isArray(raw)) { dbhRecent = []; return; }
+    dbhRecent = raw.map(item => {
+      const stems = normalizeDbhStemsList(Array.isArray(item) ? item : (item && item.stems));
+      return stems.length ? { stems: stems, dbh: equivalentDbh(stems) } : null;
+    }).filter(Boolean).slice(0, DBH_RECENT_LIMIT);
+  } catch (e) { dbhRecent = []; }
+}
+function saveDbhRecent() {
+  try { localStorage.setItem(DBH_RECENT_KEY, JSON.stringify(dbhRecent)); } catch (e) {}
+}
+function rememberDbhRecent(stems) {
+  const list = normalizeDbhStemsList(stems);
+  if (!list.length) return;
+  const key = list.join("|");
+  dbhRecent = dbhRecent.filter(r => r.stems.join("|") !== key);
+  dbhRecent.unshift({ stems: list, dbh: equivalentDbh(list) });
+  if (dbhRecent.length > DBH_RECENT_LIMIT) dbhRecent = dbhRecent.slice(0, DBH_RECENT_LIMIT);
+  saveDbhRecent();
+}
+function liveDbhStems() {
+  if (!dbhEdit) return [];
+  const stems = dbhEdit.stems.slice();
+  const buf = String(dbhEdit.buffer || "").trim();
+  if (dbhEdit.editingIndex >= 0) {
+    if (buf !== "") stems[dbhEdit.editingIndex] = buf;
+    else stems.splice(dbhEdit.editingIndex, 1);
+    return normalizeDbhStemsList(stems);
+  }
+  if (buf !== "" && parseStemNumber(buf) != null) return normalizeDbhStemsList(stems.concat([buf]));
+  return normalizeDbhStemsList(stems);
+}
+function clearDbhEdit() {
+  dbhEdit = null;
+  const box = document.getElementById("dbhExtra");
+  if (box) box.hidden = true;
+}
+function initDbhEdit(row) {
+  const stems = dbhStemsFromRow(row);
+  dbhEdit = {
+    rowId: row && row.id,
+    stems: stems.slice(),
+    buffer: "",
+    editingIndex: -1,
+    started: false
+  };
+  const box = document.getElementById("dbhExtra");
+  if (box) box.hidden = false;
+  renderDbhExtra();
+}
+function markDbhDirty() {
+  const input = state.numTarget;
+  if (measureInputMatchesStash(input)) state.measureStash.dirty = true;
+  else if (input && input.dataset.key === "dbh") {
+    const row = rowFromInput(input);
+    if (row && !state.measureStash) {
+      state.measureStash = { rowId: row.id, key: "dbh", original: String(row.dbh || ""), originalStems: dbhStemsFromRow(row).slice(), dirty: true };
+    }
+  }
+  if (dbhEdit) dbhEdit.started = true;
+}
+function startFreshDbhSet() {
+  markDbhDirty();
+  if (dbhEdit) {
+    dbhEdit.stems = [];
+    dbhEdit.editingIndex = -1;
+    dbhEdit.buffer = "";
+    dbhEdit.started = true;
+  }
+}
+function applyLiveDbhToRow() {
+  const input = state.numTarget;
+  if (!input || input.dataset.key !== "dbh" || !dbhEdit) return;
+  const row = rowFromInput(input);
+  const stems = liveDbhStems();
+  const eq = equivalentDbh(stems);
+  input.value = eq;
+  if (row) {
+    pushUndo(row.id + ":dbh");
+    applyDbhStemsToRow(row, stems, "");
+    save();
+    updateCountAndLists();
+  }
+  renderDbhExtra();
+}
+function commitDbhEdit(st) {
+  if (!st || st.key !== "dbh") {
+    clearDbhEdit();
+    return;
+  }
+  const input = state.numTarget;
+  const row = input ? rowFromInput(input) : (st.rowId ? state.rows.find(r => r.id === st.rowId) : null);
+  if (!st.dirty) {
+    if (input && String(input.value || "").trim() === "") input.value = st.original;
+    if (row) applyDbhStemsToRow(row, st.originalStems && st.originalStems.length >= 2 ? st.originalStems : null, st.original);
+    clearDbhEdit();
+    return;
+  }
+  const stems = liveDbhStems();
+  if (row) {
+    applyDbhStemsToRow(row, stems, "");
+    if (input) input.value = row.dbh || "";
+    const orig = normalizeDbhStemsList(st.originalStems && st.originalStems.length ? st.originalStems : (st.original ? [st.original] : []));
+    if (stems.length && stems.join("|") !== orig.join("|")) rememberDbhRecent(stems);
+    save();
+  }
+  clearDbhEdit();
+}
+function renderDbhExtra() {
+  const box = document.getElementById("dbhExtra");
+  const calc = document.getElementById("dbhCalcLine");
+  const list = document.getElementById("dbhStemList");
+  const recBox = document.getElementById("dbhRecentBox");
+  const recList = document.getElementById("dbhRecentList");
+  if (!box || !list) return;
+  if (!dbhEdit || !state.numTarget || state.numTarget.dataset.key !== "dbh") {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const stems = dbhEdit.started ? liveDbhStems() : dbhEdit.stems.slice();
+  const displayStems = dbhEdit.started || stems.length ? stems : dbhEdit.stems.slice();
+  const shown = [];
+  if (dbhEdit.started) {
+    const work = dbhEdit.stems.slice();
+    if (dbhEdit.editingIndex >= 0) {
+      work.forEach((s, i) => {
+        shown.push({ text: s, index: i, on: i === dbhEdit.editingIndex, value: i === dbhEdit.editingIndex ? (dbhEdit.buffer || s) : s });
+      });
+    } else {
+      work.forEach((s, i) => shown.push({ text: s, index: i, on: false, value: s }));
+      if (String(dbhEdit.buffer || "").trim() !== "") shown.push({ text: dbhEdit.buffer, index: -1, on: true, value: dbhEdit.buffer });
+    }
+  } else {
+    dbhEdit.stems.forEach((s, i) => shown.push({ text: s, index: i, on: false, value: s }));
+  }
+  const calcStems = shown.map(x => x.value);
+  const eq = equivalentDbh(calcStems);
+  if (calc) {
+    if (normalizeDbhStemsList(calcStems).length >= 2 && eq) {
+      calc.hidden = false;
+      calc.textContent = "樹木 DBH：" + eq + " mm";
+    } else {
+      calc.hidden = true;
+      calc.textContent = "";
+    }
+  }
+  list.replaceChildren();
+  if (!shown.length) {
+    const empty = document.createElement("span");
+    empty.className = "stem-empty";
+    empty.textContent = "可輸入多條莖的直徑，再按「加 D」";
+    list.appendChild(empty);
+  } else {
+    shown.forEach((item, n) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = item.on ? "on" : "";
+      const label = item.index >= 0 ? ("D" + (item.index + 1) + " " + item.value) : ("D" + (n + 1) + " " + item.value);
+      b.textContent = label;
+      b.title = "編輯此莖直徑";
+      if (item.index >= 0) {
+        b.addEventListener("pointerdown", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          selectDbhStem(item.index);
+        });
+      }
+      list.appendChild(b);
+    });
+  }
+  if (recList) {
+    recList.replaceChildren();
+    if (!dbhRecent.length) {
+      const empty = document.createElement("span");
+      empty.className = "dbh-recent-empty";
+      empty.textContent = "暫無最近記錄";
+      recList.appendChild(empty);
+    } else {
+      dbhRecent.forEach((rec, i) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        const multi = rec.stems.length >= 2;
+        b.textContent = multi ? (rec.stems.join("+") + "→" + rec.dbh) : rec.stems[0];
+        b.title = multi ? ("莖 " + rec.stems.join("、") + "，樹木 DBH " + rec.dbh + " mm") : ("DBH " + rec.stems[0] + " mm");
+        b.addEventListener("pointerdown", ev => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          applyDbhRecent(i);
+        });
+        recList.appendChild(b);
+      });
+    }
+  }
+  if (recBox) recBox.hidden = false;
+}
+function selectDbhStem(index) {
+  if (!dbhEdit || index < 0 || index >= dbhEdit.stems.length) return;
+  if (!dbhEdit.started) {
+    dbhEdit.started = true;
+  }
+  if (dbhEdit.editingIndex >= 0 && String(dbhEdit.buffer || "").trim() !== "" && parseStemNumber(dbhEdit.buffer) != null) {
+    dbhEdit.stems[dbhEdit.editingIndex] = String(dbhEdit.buffer).trim();
+  } else if (dbhEdit.editingIndex < 0 && String(dbhEdit.buffer || "").trim() !== "" && parseStemNumber(dbhEdit.buffer) != null) {
+    dbhEdit.stems.push(String(dbhEdit.buffer).trim());
+  }
+  dbhEdit.editingIndex = index;
+  dbhEdit.buffer = String(dbhEdit.stems[index] || "");
+  renderDbhExtra();
+}
+function addDbhStem() {
+  if (!dbhEdit) return;
+  const buf = String(dbhEdit.buffer || "").trim();
+  if (!dbhEdit.started) {
+    if (!dbhEdit.stems.length && buf === "") return;
+    markDbhDirty();
+    dbhEdit.started = true;
+    if (buf && parseStemNumber(buf) != null) {
+      dbhEdit.stems.push(buf);
+    }
+    dbhEdit.buffer = "";
+    dbhEdit.editingIndex = -1;
+    applyLiveDbhToRow();
+    return;
+  }
+  if (buf && parseStemNumber(buf) != null) {
+    markDbhDirty();
+    if (dbhEdit.editingIndex >= 0) dbhEdit.stems[dbhEdit.editingIndex] = buf;
+    else dbhEdit.stems.push(buf);
+    dbhEdit.buffer = "";
+    dbhEdit.editingIndex = -1;
+    applyLiveDbhToRow();
+    return;
+  }
+  if (dbhEdit.stems.length) {
+    dbhEdit.editingIndex = -1;
+    dbhEdit.buffer = "";
+    renderDbhExtra();
+  }
+}
+function applyDbhRecent(index) {
+  const rec = dbhRecent[index];
+  if (!rec || !dbhEdit) return;
+  markDbhDirty();
+  dbhEdit.started = true;
+  dbhEdit.stems = rec.stems.slice();
+  dbhEdit.buffer = "";
+  dbhEdit.editingIndex = -1;
+  applyLiveDbhToRow();
+}
+function dbhNumpadPress(key) {
+  if (!dbhEdit) return;
+  if (key === "清空") {
+    markDbhDirty();
+    dbhEdit.started = true;
+    dbhEdit.stems = [];
+    dbhEdit.buffer = "";
+    dbhEdit.editingIndex = -1;
+    applyLiveDbhToRow();
+    return;
+  }
+  if (!dbhEdit.started && key !== "⌫") {
+    startFreshDbhSet();
+  }
+  let v = String(dbhEdit.buffer || "");
+  if (key === "⌫") {
+    if (v) {
+      v = v.slice(0, -1);
+      if (dbhEdit.started) markDbhDirty();
+      else if (dbhEdit.editingIndex >= 0) {
+        markDbhDirty();
+        dbhEdit.started = true;
+      }
+    } else if (dbhEdit.editingIndex >= 0) {
+      markDbhDirty();
+      dbhEdit.started = true;
+      dbhEdit.stems.splice(dbhEdit.editingIndex, 1);
+      dbhEdit.editingIndex = -1;
+      dbhEdit.buffer = "";
+      applyLiveDbhToRow();
+      return;
+    } else if (dbhEdit.started && dbhEdit.stems.length) {
+      markDbhDirty();
+      const last = dbhEdit.stems.pop();
+      v = String(last || "").slice(0, -1);
+    } else return;
+    dbhEdit.buffer = v;
+    if (dbhEdit.started) applyLiveDbhToRow();
+    else renderDbhExtra();
+    return;
+  }
+  if (key === ".") {
+    if (v.includes(".")) return;
+    v = v === "" ? "0." : v + ".";
+  } else {
+    v += key;
+  }
+  dbhEdit.buffer = v;
+  if (!dbhEdit.started) {
+    startFreshDbhSet();
+    dbhEdit.buffer = v;
+  }
+  markDbhDirty();
+  applyLiveDbhToRow();
+}
+
 function measureInputMatchesStash(input) {
   const st = state.measureStash;
   if (!st || !input || !input.closest) return false;
@@ -2333,7 +2836,15 @@ function measureInputMatchesStash(input) {
 }
 function settleMeasureField(input) {
   const st = state.measureStash;
-  if (!st || !measureInputMatchesStash(input)) return;
+  if (!st || !measureInputMatchesStash(input)) {
+    if (input && input.dataset && input.dataset.key === "dbh") clearDbhEdit();
+    return;
+  }
+  if (st.key === "dbh") {
+    commitDbhEdit(st);
+    state.measureStash = null;
+    return;
+  }
   if (!st.dirty && String(input.value || "").trim() === "") input.value = st.original;
   state.measureStash = null;
 }
@@ -2347,6 +2858,16 @@ function prepareMeasureReplace(input) {
     return;
   }
   const original = String((row && row[key]) || input.value || "");
+  const originalStems = key === "dbh" ? dbhStemsFromRow(row) : null;
+  if (key === "dbh") {
+    if (row) {
+      state.measureStash = { rowId: row.id, key, original, originalStems: (originalStems || []).slice(), dirty: false };
+      input.value = "";
+    } else {
+      state.measureStash = null;
+    }
+    return;
+  }
   if (!original.trim() || !row) {
     state.measureStash = null;
     return;
@@ -2378,15 +2899,22 @@ function showKeypad(input) {
   document.body.classList.add("numpad-open");
   document.body.classList.toggle("mode-treeno", key === "treeNo");
   document.body.classList.toggle("mode-h", key === "h");
+  document.body.classList.toggle("mode-dbh", key === "dbh");
   syncPrefixButtons();
   syncHOptions();
   renderNumpadKeys(key);
+  if (key === "dbh") {
+    const row = rowFromInput(input);
+    if (!dbhEdit || dbhEdit.rowId !== (row && row.id)) initDbhEdit(row);
+    else renderDbhExtra();
+  } else clearDbhEdit();
   setTimeout(() => input.scrollIntoView({ block: "center", inline: "nearest" }), 50);
 }
 function hideKeypad() {
   if (state.numTarget) settleMeasureField(state.numTarget);
-  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h");
+  document.body.classList.remove("numpad-open", "mode-treeno", "mode-h", "mode-dbh");
   state.numTarget = null;
+  clearDbhEdit();
   commitEditStash();
 }
 function currentTargetRow() {
@@ -2482,9 +3010,13 @@ function numpadPress(key) {
   const input = state.numTarget;
   if (!input) return;
   if (rejectLocked(rowFromInput(input))) return;
+  const field = input.dataset.key;
+  if (field === "dbh") {
+    dbhNumpadPress(key);
+    return;
+  }
   if (measureInputMatchesStash(input)) state.measureStash.dirty = true;
   let v = String(input.value || "");
-  const field = input.dataset.key;
   if (key === "⌫") {
     if (field === "treeNo") {
       const p = treePrefix(v);
@@ -2685,6 +3217,12 @@ function initNumpad() {
   document.getElementById("numpadNext").addEventListener("pointerdown", ev => {
     ev.preventDefault(); ev.stopPropagation();
     numpadAdvance();
+  });
+  const addStem = document.getElementById("dbhAddStem");
+  if (addStem) addStem.addEventListener("pointerdown", ev => {
+    ev.preventDefault(); ev.stopPropagation();
+    if (rejectLocked(rowFromInput(state.numTarget))) return;
+    addDbhStem();
   });
   document.addEventListener("pointerdown", ev => {
     if (document.body.classList.contains("numpad-open")) {
@@ -3389,6 +3927,16 @@ function applyRemarkSelection(input, selected) {
   }
   renderDefectPicker();
 }
+function returnToRemarkGrid(input, selected) {
+  const filter = document.getElementById("defectFilter");
+  if (filter) {
+    filter.value = "";
+    filter.blur();
+  }
+  applyRemarkSelection(input, selected);
+  const dlg = document.getElementById("defectDlg");
+  if (dlg) dlg.scrollTop = 0;
+}
 function bindSearchRemarkPick(el, fn) {
   let handled = false;
   el.addEventListener("pointerdown", ev => {
@@ -3406,6 +3954,7 @@ function bindSearchRemarkPick(el, fn) {
   });
 }
 function remarkCItemOn(selected, item) {
+  if (item.ic) return [...selected].some(s => isInConflictRemark(s));
   if (item.parts) return item.parts.some(part => remarkSelected(selected, part.name));
   return remarkSelected(selected, item.name);
 }
@@ -3433,7 +3982,7 @@ function closeDefectPartPop() {
   const pop = document.getElementById("defectPartPop");
   if (pop) pop.hidden = true;
 }
-function openDefectPartPop(title, options, selected, input) {
+function openDefectPartPop(title, options, selected, input, onChoose) {
   const pop = document.getElementById("defectPartPop");
   const titleEl = document.getElementById("defectPartTitle");
   const box = document.getElementById("defectPartChoices");
@@ -3445,12 +3994,17 @@ function openDefectPartPop(title, options, selected, input) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = item.abbr;
-    b.title = item.name;
-    b.setAttribute("aria-label", item.abbr + "，" + item.name);
-    if (remarkSelected(selected, item.name)) b.classList.add("on");
+    b.title = item.name || item.abbr;
+    b.setAttribute("aria-label", item.abbr + "，" + (item.name || item.abbr));
+    const on = item.on != null ? !!item.on : remarkSelected(selected, item.name);
+    if (on) b.classList.add("on");
     b.addEventListener("click", ev => {
       ev.preventDefault();
       ev.stopPropagation();
+      if (typeof onChoose === "function") {
+        onChoose(item);
+        return;
+      }
       toggleRemarkItem(selected, item.name);
       closeDefectPartPop();
       applyRemarkSelection(input, selected);
@@ -3458,6 +4012,22 @@ function openDefectPartPop(title, options, selected, input) {
     box.appendChild(b);
   });
   pop.hidden = false;
+}
+function openInConflictFlow(selected, input) {
+  const partOptions = REMARK_C_IC_TREE_PARTS.map(p => ({
+    abbr: p.abbr,
+    name: p.abbr,
+    part: p.part,
+    on: [...selected].some(s => isInConflictRemark(s) && remarkBaseName(s).toLowerCase().endsWith(" on " + p.part))
+  }));
+  openDefectPartPop("In conflict", partOptions, selected, input, choice => {
+    const part = choice.part;
+    const objOptions = REMARK_C_IC_OBJECTS.map(o => ({
+      abbr: o.abbr,
+      name: remarkCIcName(o.noun, part)
+    }));
+    openDefectPartPop("In conflict · " + choice.abbr, objOptions, selected, input);
+  });
 }
 function initDefectPartPop() {
   const cancel = document.getElementById("defectPartCancel");
@@ -3512,7 +4082,11 @@ function renderDefectPicker() {
   const locsBox = document.getElementById("defectLocs");
   const shorts = document.getElementById("defectShortcuts");
   if (locsBox) locsBox.className = mode === "C" ? "defect-locs mode-c" : "defect-locs";
-  if (mode === "B") {
+  if (q) {
+    closeDefectPartPop();
+    if (locsBox) locsBox.hidden = true;
+    if (shorts) shorts.hidden = true;
+  } else if (mode === "B") {
     closeDefectPartPop();
     if (mods) mods.querySelectorAll("[data-remark-top]").forEach(el => el.remove());
     if (locsBox) { locsBox.hidden = true; locsBox.replaceChildren(); }
@@ -3585,7 +4159,8 @@ function renderDefectPicker() {
       grid.className = "loc-btns";
       REMARK_C_LOCS.forEach(item => {
         appendRemarkCButton(grid, item, selected, input, () => {
-          openDefectPartPop(item.abbr, item.parts, selected, input);
+          if (item.ic) openInConflictFlow(selected, input);
+          else openDefectPartPop(item.abbr, item.parts, selected, input);
         });
       });
       col.appendChild(grid);
@@ -3645,7 +4220,7 @@ function renderDefectPicker() {
         if (remarkSelected(selected, d)) b.className = "on";
         bindSearchRemarkPick(b, () => {
           toggleRemarkItem(selected, d);
-          applyRemarkSelection(input, selected);
+          returnToRemarkGrid(input, selected);
         });
         box.appendChild(b);
       });
@@ -3709,6 +4284,48 @@ function completedFilledCount() {
 function clearableFilledCount() {
   return state.rows.filter(r => isFilled(r) && !isRowCompleted(r)).length;
 }
+function requestDeleteTree() {
+  hideKeypad();
+  hideSpeciesBar(true);
+  const unlock = document.getElementById("unlockDlg");
+  if (unlock && unlock.open) cancelUnlockRow();
+  const row = currentActiveRow();
+  if (!row) { toast("請先點選其中一格"); return; }
+  if (!isFilled(row)) { toast("此行未有資料"); return; }
+  state.pendingDeleteId = row.id;
+  const label = String(row.treeNo || "").trim();
+  const who = label ? ("「" + label + "」") : "這一棵";
+  const msg = isRowLocked(row)
+    ? (who + "已完成並鎖定。確定刪除這一棵的已完成資料？")
+    : ("確定刪除" + who + "的資料？");
+  document.getElementById("deleteMsg").textContent = msg + "刪除後可用「上一步」復原。其他樹木的編號不會改動。";
+  document.getElementById("deleteDlg").showModal();
+}
+function cancelDeleteTree() {
+  const dlg = document.getElementById("deleteDlg");
+  state.pendingDeleteId = null;
+  if (dlg && dlg.open) dlg.close();
+}
+function applyDeleteTree() {
+  const dlg = document.getElementById("deleteDlg");
+  const id = state.pendingDeleteId;
+  state.pendingDeleteId = null;
+  if (dlg && dlg.open) dlg.close();
+  const idx = state.rows.findIndex(r => r.id === id);
+  if (idx < 0) return;
+  const row = state.rows[idx];
+  if (!isFilled(row)) return;
+  pushUndo("delete-tree:" + id);
+  endUndoCoalesce();
+  state.rows.splice(idx, 1);
+  if (state.workRowId === id) state.workRowId = null;
+  if (state.activeRowId === id) state.activeRowId = null;
+  if (state.searchHits && state.searchHits.delete) state.searchHits.delete(id);
+  padToPageMultiple();
+  save();
+  render();
+  toast("已刪除這一棵的資料，可用「上一步」復原");
+}
 function requestClearAll() {
   hideKeypad();
   hideSpeciesBar(true);
@@ -3752,6 +4369,10 @@ document.getElementById("btnNext").addEventListener("click", () => goPage(1));
 document.getElementById("btnExport").addEventListener("click", () => { exportXlsx().catch(err => { console.error(err); toast("匯出失敗"); }); });
 document.getElementById("btnHtml").addEventListener("click", exportHtmlBackup);
 document.getElementById("btnClear").addEventListener("click", requestClearAll);
+document.getElementById("btnDeleteTree").addEventListener("click", ev => { ev.preventDefault(); requestDeleteTree(); });
+document.getElementById("deleteCancel").addEventListener("click", ev => { ev.preventDefault(); cancelDeleteTree(); });
+document.getElementById("deleteConfirm").addEventListener("click", ev => { ev.preventDefault(); applyDeleteTree(); });
+document.getElementById("deleteDlg").addEventListener("cancel", () => { state.pendingDeleteId = null; });
 document.getElementById("clearCancel").addEventListener("click", () => document.getElementById("clearDlg").close());
 document.getElementById("clearConfirm").addEventListener("click", applyClearAll);
 document.getElementById("btnImport").addEventListener("click", () => document.getElementById("file").click());
